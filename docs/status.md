@@ -10,8 +10,8 @@
 
 | Phase | Status | Progress |
 |-------|--------|----------|
-| Phase 0: Setup | In Progress | 80% |
-| Phase 1: MVP | In Progress | 10% |
+| Phase 0: Setup | Complete | 100% |
+| Phase 1: MVP | In Progress | 25% |
 | Phase 2: PaCT | Not Started | 0% |
 | Phase 3: Production | Not Started | 0% |
 
@@ -39,14 +39,20 @@
 - [x] .gitignore configured
 
 ### In Progress
-- [ ] Phase 1.1: Core Types (core_types crate) - 12 tests passing
+- [ ] Phase 1.4: Rust Koans Tasks - next up
 
 ### Not Started
-- [ ] Set up pre-commit hooks
-- [ ] Add scripts/ shell scripts
+- [ ] Phase 1.5: LLM Client
+- [ ] Phase 1.6: Agent Loop
 - [ ] README.md with project overview
 - [ ] CLAUDE.md for AI agent context
 - [ ] docs/learnings.md initialized
+
+### Recently Completed
+- [x] Phase 1.1: Core Types (core_types) - 12 tests
+- [x] Phase 1.2: Episode Capture (capture) - 9 tests
+- [x] Phase 1.3: Sandbox (sandbox) - 9 tests
+- [x] Add scripts/ shell scripts (build-all, test-all, lint, quick-cycle)
 
 ---
 
@@ -62,6 +68,10 @@ None currently.
 - Created initial documentation structure
 - Captured research from ChatGPT conversation
 - Generated PRD, architecture, design, plan, and status docs
+- Implemented core_types crate (Episode, Task, EvalResult) - 12 tests
+- Implemented capture crate (EpisodeStore with SQLite) - 9 tests
+- Implemented sandbox crate (isolated cargo check/test) - 9 tests
+- Added helper scripts (build-all, test-all, lint, quick-cycle)
 
 ---
 
