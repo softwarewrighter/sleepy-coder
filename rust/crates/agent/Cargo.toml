@@ -1,0 +1,16 @@
+[package]
+name = "agent"
+version.workspace = true
+edition.workspace = true
+description = "Minimal Pi-like agent loop for sleepy-coder"
+
+[dependencies]
+core_types = { workspace = true }
+capture = { workspace = true }
+sandbox = { workspace = true }
+tokio = { workspace = true }
+reqwest = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+anyhow = { workspace = true }

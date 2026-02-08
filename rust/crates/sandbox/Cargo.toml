@@ -1,0 +1,10 @@
+[package]
+name = "sandbox"
+version.workspace = true
+edition.workspace = true
+description = "Sandboxed code execution for sleepy-coder"
+
+[dependencies]
+core_types = { workspace = true }
+tempfile = { workspace = true }
+thiserror = { workspace = true }

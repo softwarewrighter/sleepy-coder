@@ -1,0 +1,11 @@
+[package]
+name = "tasks_rust_koans"
+version.workspace = true
+edition.workspace = true
+description = "Rust koan task generator and loader for sleepy-coder"
+
+[dependencies]
+core_types = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }

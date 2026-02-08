@@ -10,8 +10,8 @@
 
 | Phase | Status | Progress |
 |-------|--------|----------|
-| Phase 0: Setup | In Progress | 20% |
-| Phase 1: MVP | Not Started | 0% |
+| Phase 0: Setup | In Progress | 80% |
+| Phase 1: MVP | In Progress | 10% |
 | Phase 2: PaCT | Not Started | 0% |
 | Phase 3: Production | Not Started | 0% |
 
@@ -30,15 +30,18 @@
 - [x] docs/design.md - Technical design
 - [x] docs/plan.md - Implementation plan
 - [x] docs/status.md - This file
+- [x] docs/references.md - Paper links
+- [x] Create Rust workspace structure
+- [x] Configure Cargo.toml workspace
+- [x] Create Python package structure
+- [x] Configure pyproject.toml
+- [x] Set up data/ and runs/ directories
+- [x] .gitignore configured
 
 ### In Progress
-- [ ] Create Rust workspace structure
-- [ ] Create Python package structure
+- [ ] Phase 1.1: Core Types (core_types crate) - 12 tests passing
 
 ### Not Started
-- [ ] Set up data/ and runs/ directories
-- [ ] Configure Cargo.toml workspace
-- [ ] Configure pyproject.toml
 - [ ] Set up pre-commit hooks
 - [ ] Add scripts/ shell scripts
 - [ ] README.md with project overview

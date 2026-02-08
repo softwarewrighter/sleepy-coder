@@ -1,0 +1,20 @@
+[package]
+name = "sleepy-coder"
+version.workspace = true
+edition.workspace = true
+description = "CLI for sleepy-coder continual learning agent"
+
+[[bin]]
+name = "sleepy-coder"
+path = "src/main.rs"
+
+[dependencies]
+core_types = { workspace = true }
+capture = { workspace = true }
+sandbox = { workspace = true }
+agent = { workspace = true }
+tasks_rust_koans = { workspace = true }
+eval = { workspace = true }
+clap = { workspace = true }
+tokio = { workspace = true }
+anyhow = { workspace = true }

@@ -1,0 +1,56 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/core_types",
+    "crates/capture",
+    "crates/sandbox",
+    "crates/agent",
+    "crates/tasks_rust_koans",
+    "crates/eval",
+    "crates/cli",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+authors = ["Software Wrighter"]
+license = "MIT"
+repository = "https://github.com/softwarewrighter/sleepy-coder"
+
+[workspace.dependencies]
+# Async runtime
+tokio = { version = "1", features = ["full"] }
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Database
+rusqlite = { version = "0.31", features = ["bundled"] }
+
+# File system
+tempfile = "3"
+
+# HTTP client
+reqwest = { version = "0.12", features = ["json"] }
+
+# CLI
+clap = { version = "4", features = ["derive"] }
+
+# Time
+chrono = { version = "0.4", features = ["serde"] }
+
+# Error handling
+thiserror = "1"
+anyhow = "1"
+
+# Hashing
+sha2 = "0.10"
+
+# Internal crates
+core_types = { path = "crates/core_types" }
+capture = { path = "crates/capture" }
+sandbox = { path = "crates/sandbox" }
+agent = { path = "crates/agent" }
+tasks_rust_koans = { path = "crates/tasks_rust_koans" }
+eval = { path = "crates/eval" }
