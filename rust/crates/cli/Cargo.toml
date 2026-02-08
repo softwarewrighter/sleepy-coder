@@ -18,3 +18,4 @@ eval = { workspace = true }
 clap = { workspace = true }
 tokio = { workspace = true }
 anyhow = { workspace = true }
+chrono = { workspace = true }
