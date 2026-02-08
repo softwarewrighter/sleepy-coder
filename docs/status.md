@@ -31,8 +31,8 @@
 - [x] Helper scripts (build-all, test-all, lint, quick-cycle)
 
 ### Documentation
-- [ ] README.md with project overview
-- [ ] CLAUDE.md for AI agent context
+- [x] README.md with project overview
+- [x] CLAUDE.md for AI agent context
 - [ ] docs/learnings.md initialized
 
 ---
