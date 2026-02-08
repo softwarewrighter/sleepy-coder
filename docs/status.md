@@ -1,6 +1,6 @@
 # Project Status: Sleepy Coder
 
-## Current Phase: Phase 0 - Project Setup
+## Current Phase: Phase 1 - MVP
 
 **Last Updated**: 2026-02-08
 
@@ -11,15 +11,36 @@
 | Phase | Status | Progress |
 |-------|--------|----------|
 | Phase 0: Setup | Complete | 100% |
-| Phase 1: MVP | In Progress | 25% |
+| Phase 1: MVP | In Progress | 65% |
 | Phase 2: PaCT | Not Started | 0% |
 | Phase 3: Production | Not Started | 0% |
 
 ---
 
-## Phase 0: Project Setup
+## Phase 1: MVP
 
 ### Completed
+- [x] Phase 1.1: Core Types (core_types) - 12 tests
+- [x] Phase 1.2: Episode Capture (capture) - 9 tests
+- [x] Phase 1.3: Sandbox (sandbox) - 9 tests
+- [x] Phase 1.4: Rust Koans Tasks (tasks_rust_koans) - 10 tests, 42 builtin koans
+- [x] Helper scripts (build-all, test-all, lint, quick-cycle)
+
+### In Progress
+- [ ] Phase 1.5: LLM Client (agent crate) - next up
+
+### Not Started
+- [ ] Phase 1.6: Agent Loop
+- [ ] Phase 1.7: Evaluation harness (eval crate)
+- [ ] Phase 1.8: CLI (cli crate)
+- [ ] README.md with project overview
+- [ ] CLAUDE.md for AI agent context
+- [ ] docs/learnings.md initialized
+
+---
+
+## Phase 0: Project Setup (Complete)
+
 - [x] Initial repository created
 - [x] docs/research.txt - Captured research conversation
 - [x] docs/ai_agent_instructions.md - AI agent guidelines
@@ -37,22 +58,6 @@
 - [x] Configure pyproject.toml
 - [x] Set up data/ and runs/ directories
 - [x] .gitignore configured
-
-### In Progress
-- [ ] Phase 1.4: Rust Koans Tasks - next up
-
-### Not Started
-- [ ] Phase 1.5: LLM Client
-- [ ] Phase 1.6: Agent Loop
-- [ ] README.md with project overview
-- [ ] CLAUDE.md for AI agent context
-- [ ] docs/learnings.md initialized
-
-### Recently Completed
-- [x] Phase 1.1: Core Types (core_types) - 12 tests
-- [x] Phase 1.2: Episode Capture (capture) - 9 tests
-- [x] Phase 1.3: Sandbox (sandbox) - 9 tests
-- [x] Add scripts/ shell scripts (build-all, test-all, lint, quick-cycle)
 
 ---
 
@@ -72,16 +77,16 @@ None currently.
 - Implemented capture crate (EpisodeStore with SQLite) - 9 tests
 - Implemented sandbox crate (isolated cargo check/test) - 9 tests
 - Added helper scripts (build-all, test-all, lint, quick-cycle)
+- Implemented tasks_rust_koans crate - 10 tests, 42 builtin koans across 5 error families
 
 ---
 
 ## Next Steps
 
-1. **Create Rust workspace** - Set up `rust/Cargo.toml` with crate structure
-2. **Create Python package** - Set up `py/pyproject.toml` with sleepy_pact package
-3. **Add core_types crate** - Define Episode, Task, EvalResult structs
-4. **Create data directories** - koans/, episodes/, sft/, evalsets/
-5. **Write bootstrap.sh** - First-time setup script
+1. **Phase 1.5: LLM Client** - Implement Ollama API client in agent crate
+2. **Phase 1.6: Agent Loop** - Build the RED→patch→GREEN loop
+3. **Phase 1.7: Eval** - Evaluation harness for frozen eval sets
+4. **Phase 1.8: CLI** - Command-line interface to run day/sleep cycles
 
 ---
 
