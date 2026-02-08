@@ -11,7 +11,7 @@
 | Phase | Status | Progress |
 |-------|--------|----------|
 | Phase 0: Setup | Complete | 100% |
-| Phase 1: MVP | In Progress | 65% |
+| Phase 1: MVP | In Progress | 75% |
 | Phase 2: PaCT | Not Started | 0% |
 | Phase 3: Production | Not Started | 0% |
 
@@ -24,14 +24,14 @@
 - [x] Phase 1.2: Episode Capture (capture) - 9 tests
 - [x] Phase 1.3: Sandbox (sandbox) - 9 tests
 - [x] Phase 1.4: Rust Koans Tasks (tasks_rust_koans) - 10 tests, 42 builtin koans
+- [x] Phase 1.5: LLM Client (agent crate) - OllamaClient with generate/generate_fix
+- [x] Phase 1.6: Agent Loop (agent crate) - RED-patch-GREEN loop, 13 tests total
 - [x] Helper scripts (build-all, test-all, lint, quick-cycle)
 
 ### In Progress
-- [ ] Phase 1.5: LLM Client (agent crate) - next up
+- [ ] Phase 1.7: Evaluation harness (eval crate) - next up
 
 ### Not Started
-- [ ] Phase 1.6: Agent Loop
-- [ ] Phase 1.7: Evaluation harness (eval crate)
 - [ ] Phase 1.8: CLI (cli crate)
 - [ ] README.md with project overview
 - [ ] CLAUDE.md for AI agent context
@@ -78,15 +78,16 @@ None currently.
 - Implemented sandbox crate (isolated cargo check/test) - 9 tests
 - Added helper scripts (build-all, test-all, lint, quick-cycle)
 - Implemented tasks_rust_koans crate - 10 tests, 42 builtin koans across 5 error families
+- Implemented agent crate with OllamaClient and AgentLoop - 13 tests
 
 ---
 
 ## Next Steps
 
-1. **Phase 1.5: LLM Client** - Implement Ollama API client in agent crate
-2. **Phase 1.6: Agent Loop** - Build the RED→patch→GREEN loop
-3. **Phase 1.7: Eval** - Evaluation harness for frozen eval sets
-4. **Phase 1.8: CLI** - Command-line interface to run day/sleep cycles
+1. **Phase 1.7: Eval** - Evaluation harness for frozen eval sets
+2. **Phase 1.8: CLI** - Command-line interface to run day/sleep cycles
+3. **README.md** - Project overview and getting started
+4. **CLAUDE.md** - AI agent context file
 
 ---
 
