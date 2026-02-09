@@ -1,8 +1,8 @@
 # Project Status: Sleepy Coder
 
-## Current Phase: Phase 1 - MVP
+## Current Phase: Phase 2 - PaCT (Course Correction)
 
-**Last Updated**: 2026-02-08
+**Last Updated**: 2026-02-09
 
 ---
 
@@ -12,8 +12,15 @@
 |-------|--------|----------|
 | Phase 0: Setup | Complete | 100% |
 | Phase 1: MVP | Complete | 100% |
-| Phase 2: PaCT | Not Started | 0% |
+| Phase 2: PaCT | **In Progress** | 20% |
 | Phase 3: Production | Not Started | 0% |
+
+## Critical Finding: Share Not Properly Implemented
+
+After 12 training cycles, best result was 73.3% (3.4% below baseline).
+**Root cause**: We did not implement the Share paper correctly.
+
+See [docs/course-correction.md](./course-correction.md) for full analysis.
 
 ---
 
@@ -67,6 +74,23 @@ None currently.
 
 ## Recent Activity
 
+### 2026-02-09
+- Ran 12 training cycles with various configurations
+- Best result: 73.3% pass rate (cycles 9, 10, 12)
+- **Critical discovery**: Share algorithm not properly implemented
+- Created course-correction.md with proper implementation plan
+- Generated Rust 2024 koans (format strings, let-chains, modern methods)
+- Created gate_check.py script for deployment safety
+- Created generate_koans_large.py for expanded training data
+
+### Training Cycle Results
+| Cycle | Approach | Pass Rate | Notes |
+|-------|----------|-----------|-------|
+| C0 | Baseline | 76.7% | Target to beat |
+| C1 | Naive LoRA | 60.0% | Catastrophic forgetting |
+| C9-10 | Minimal (20 steps) | 73.3% | Best fine-tuned |
+| C12 | Rust 2024 | 73.3% | Same ceiling |
+
 ### 2026-02-08
 - Created initial documentation structure
 - Captured research from ChatGPT conversation
@@ -80,27 +104,30 @@ None currently.
 - Implemented eval crate with EvalHarness, EvalMetrics, run comparison - 12 tests
 - Implemented CLI with run/eval/list/show commands - 7 tests
 - **Phase 1: MVP Complete** - 72 tests total
+- CUDA training pipeline working
+- GGUF quantization and Ollama export working
 
 ---
 
 ## Next Steps
 
-1. **README.md** - Project overview and getting started guide
-2. **CLAUDE.md** - AI agent context file
-3. **Integration testing** - End-to-end tests with Ollama running
-4. **Phase 2: PaCT** - Implement LoRA training pipeline
+1. **Implement Share Algorithm Properly** - See course-correction.md
+2. **Generate 50 distinct task families** - Truly novel training data
+3. **SVD-based subspace extraction** - Principal basis + frozen coefficients
+4. **Coefficient-only training** - For new tasks (cheaper than full LoRA)
 
 ---
 
 ## Metrics
 
-(Will be populated once MVP is running)
-
-| Metric | Baseline | Current | Target |
-|--------|----------|---------|--------|
-| Repeat Error Rate | - | - | < 20% after 6 cycles |
-| Median Steps to Green | - | - | < 3.0 after 6 cycles |
-| Frozen Set Pass Rate | - | - | > 90% maintained |
+| Metric | Baseline (C0) | Best (C9-12) | Target |
+|--------|---------------|--------------|--------|
+| Pass Rate | **76.7%** | 73.3% | ≥ 76.7% |
+| Median Steps to Green | 2.0 | 2.0 | ≤ 2.0 |
+| Error Families |  |  |  |
+| - BorrowChecker | 70.0% | 70.0% | ≥ 70% |
+| - ResultHandling | 90.0% | 70-90% | ≥ 90% |
+| - TraitBounds | 70.0% | 60-70% | ≥ 70% |
 
 ---
 

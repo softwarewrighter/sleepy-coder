@@ -97,7 +97,7 @@ A minimal coding agent (Pi-like loop) with a continual learning subsystem that:
 3. **Regression suite maintains** >= 95% pass rate
 4. **Demo video** showing visual improvement over time
 
-## Lessons Learned (Updated 2026-02-08)
+## Lessons Learned (Updated 2026-02-09)
 
 ### Catastrophic Forgetting is Real
 Initial naive SFT training caused 16.7% regression. Research shows:
@@ -105,13 +105,24 @@ Initial naive SFT training caused 16.7% regression. Research shows:
 - Lower learning rates prevent overwriting (1e-4 not 2e-4)
 - Mix data types: success + failure + replay
 
-### Required Mitigations
-1. **Replay Buffer**: Include original training data in every cycle
-2. **Data Mixing**: 44% replay + 42% success + 14% hard cases
-3. **Conservative LoRA**: r=8 instead of r=16
-4. **Gated Deployment**: Only promote if pass_rate >= baseline
+### Share Paper Not Properly Implemented
+After 12 training cycles, best result was 73.3% (3.4% below baseline).
+**Root cause**: We did not implement Share algorithm correctly.
 
-See `docs/changes.md` for full analysis.
+| What We Did | What Share Requires |
+|-------------|---------------------|
+| 6 adapters on same data | 10-50 adapters on distinct tasks |
+| Merged weights directly | SVD-based subspace extraction |
+| Full LoRA each cycle | Coefficient-only training (basis frozen) |
+| Heavy replay (50%+) | No replay needed |
+
+### Corrective Action
+1. Generate 50 distinct task families
+2. Train one adapter per family
+3. Extract shared basis via SVD (60% variance)
+4. Train only coefficients for new tasks
+
+See `docs/course-correction.md` for full analysis.
 
 ## Deliverables
 

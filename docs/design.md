@@ -96,44 +96,114 @@ dataset_composition = {
 
 This mix prevents the model from forgetting base capabilities while learning from failures.
 
-### 5. Share-Style Consolidation (Phase 2)
+### 5. Share-Style Consolidation (Phase 2) - REVISED
 
-Algorithm 1 from the Share paper:
+**Status**: Not yet properly implemented. See [course-correction.md](./course-correction.md).
 
+#### Share Algorithm (arXiv:2602.06043)
+
+**Phase 1: Initialization**
 ```python
-def consolidate(adapters: List[LoraAdapter], rank_k: int):
-    # 1. Collect LoRA delta_W matrices
-    deltas = [compute_delta_w(a) for a in adapters]
+def share_consolidate(adapters: List[Path], k_target_variance: float = 0.6):
+    """Extract shared subspace from N adapters trained on distinct tasks."""
+    # 1. Load LoRA adapters
+    loras = [load_lora_adapter(p) for p in adapters]
 
-    # 2. Stack and center
-    stacked = np.stack([d.flatten() for d in deltas])
-    centered = stacked - stacked.mean(axis=0)
+    # 2. For each layer, stack delta_W matrices
+    deltas = {}
+    for layer in loras[0].keys():
+        deltas[layer] = np.stack([
+            (lora[layer]['B'] @ lora[layer]['A']).flatten()
+            for lora in loras
+        ])
 
-    # 3. SVD to find shared subspace
-    U, S, Vh = np.linalg.svd(centered, full_matrices=False)
-    basis = Vh[:rank_k]  # Top-k principal directions
+    # 3. Center by subtracting mean
+    for layer in deltas:
+        deltas[layer] -= deltas[layer].mean(axis=0)
 
-    # 4. Compute per-task coefficients
-    coefficients = [project(d.flatten(), basis) for d in deltas]
+    # 4. SVD to find principal directions
+    basis = {}
+    for layer in deltas:
+        U, S, Vh = np.linalg.svd(deltas[layer], full_matrices=False)
+
+        # Select k for 60% explained variance
+        cumvar = np.cumsum(S ** 2) / (S ** 2).sum()
+        k = np.searchsorted(cumvar, k_target_variance) + 1
+
+        basis[layer] = {'Vh': Vh[:k], 'k': k}  # FROZEN
+
+    # 5. Compute per-adapter coefficients
+    coefficients = []
+    for lora in loras:
+        coef = {}
+        for layer in basis:
+            delta = (lora[layer]['B'] @ lora[layer]['A']).flatten()
+            coef[layer] = basis[layer]['Vh'] @ delta
+        coefficients.append(coef)
 
     return SharedBasis(basis, coefficients)
 ```
 
+**Phase 2: Continual Adaptation (Coefficient-Only Training)**
+```python
+def train_coefficients(
+    shared_basis: SharedBasis,
+    new_data: Dataset,
+    base_model: str,
+) -> Coefficients:
+    """Train ONLY coefficients for new task (basis frozen)."""
+    # Initialize coefficients
+    coefficients = {
+        layer: torch.zeros(shared_basis.basis[layer]['k'], requires_grad=True)
+        for layer in shared_basis.basis
+    }
+
+    # Training loop - MUCH cheaper than full LoRA
+    for batch in new_data:
+        # Reconstruct delta_W from basis + coefficients
+        # Forward pass, compute loss, backprop through coefficients only
+        ...
+
+    return coefficients
+```
+
+**Phase 3: Merging (Incremental Subspace Update)**
+```python
+def merge_new_adapter(shared_basis: SharedBasis, new_adapter: LoraAdapter):
+    """Merge new adapter into shared subspace."""
+    # 1. Reconstruct all prior adapters from basis + coefficients
+    reconstructed = [
+        reconstruct_adapter(shared_basis.basis, coef)
+        for coef in shared_basis.coefficients
+    ]
+
+    # 2. Add new adapter
+    reconstructed.append(new_adapter)
+
+    # 3. Re-run SVD to update subspace
+    return share_consolidate(reconstructed)
+```
+
+#### Key Hyperparameters (from paper)
+- **k**: Principal factors at 60% explained variance threshold
+- **p=1**: Pseudo-rank is effective; higher values yield minimal benefit
+- **φ=[1, k/4]**: Temporary factors range
+- **Number of adapters**: 10-50+ for good subspace estimation
+
+#### What We Did Wrong
+1. Only trained 6 adapters on similar data (need 10-50 on distinct tasks)
+2. Just merged weights (need SVD basis extraction)
+3. Retrained full LoRA each cycle (need coefficient-only training)
+4. Used 50%+ replay (Share avoids replay entirely)
+
 ### 6. UWSH Coefficient Updates (Phase 2)
 
-Based on Universal Weight Subspace Hypothesis:
+Based on Universal Weight Subspace Hypothesis (arXiv:2512.05117):
 
-```python
-def update_coefficients(
-    frozen_basis: np.ndarray,
-    new_examples: Dataset,
-    current_coefficients: np.ndarray,
-) -> np.ndarray:
-    # Only update the small coefficient vector
-    # Basis directions are frozen (reused across tasks)
-    # Much cheaper than full LoRA training
-    pass
-```
+The key insight: adapters trained on related tasks share a common low-rank subspace.
+Once we have the shared basis, new tasks only need to learn coefficients.
+
+**Compression ratio**: 50 adapters × 4MB each = 200MB → 50 coefficient vectors × ~1KB = 50KB
 
 ### 7. Evaluation Gates
 

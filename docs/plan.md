@@ -139,34 +139,46 @@
 
 ---
 
-## Phase 2: PaCT Methods
+## Phase 2: PaCT Methods (REVISED)
 
-### 2.1 Share-Style Consolidation
-- [ ] Implement delta_W extraction from LoRA
-- [ ] Implement SVD-based basis computation
-- [ ] Implement coefficient projection
-- [ ] Save shared basis + per-cycle coefficients
-- [ ] Test consolidation of 3+ adapters
+**Status**: In Progress - See [course-correction.md](./course-correction.md)
 
-### 2.2 UWSH Coefficient Updates
-- [ ] Implement frozen basis loading
-- [ ] Implement coefficient-only training
+### 2.1 Generate Distinct Task Families (50 adapters)
+- [ ] BorrowChecker variants (10 adapters): move, ref, mut, lifetime, copy/clone, rc/arc, cell, closure, async
+- [ ] TraitSystem variants (10 adapters): derive, impl, bounds, where, associated, dyn, send/sync, from/into, iterator, display
+- [ ] ErrorHandling variants (10 adapters): option, result, ?, match, combinators, custom error, thiserror, anyhow, unwrap, early return
+- [ ] Rust2024 variants (10 adapters): fmt, let-chain, let-else, is_some_and, is_ok_and, copied, flatten, matches, clippy, async closure
+- [ ] Advanced patterns (10 adapters): builder, newtype, typestate, phantom, unsafe, macro, proc_macro, simd, ffi, pin
+
+### 2.2 Implement Share Algorithm (arXiv:2602.06043)
+- [ ] `scripts/share_consolidate.py` - SVD-based subspace extraction
+- [ ] Extract k principal basis vectors (60% explained variance)
+- [ ] Compute per-adapter coefficients
+- [ ] Save frozen basis + coefficient vectors
+- [ ] Test on 10+ adapters
+
+### 2.3 Coefficient-Only Training
+- [ ] `scripts/train_coefficients.py` - Train only coefficients (basis frozen)
 - [ ] Compare training cost vs full LoRA
-- [ ] Validate performance retention
+- [ ] Validate no forgetting on frozen eval set
+- [ ] Achieve pass rate ≥ 76.7% (baseline)
 
-### 2.3 Orthogonal Constraint (Optional)
-- [ ] Implement O-LoRA style constraint
-- [ ] Compare forgetting vs baseline
+### 2.4 Incremental Subspace Update
+- [ ] Implement merge algorithm (Algorithm 1, Phase 3)
+- [ ] Reconstruct prior adapters from basis + coefficients
+- [ ] Re-run SVD to update subspace
+- [ ] Test with 20+ adapters arriving incrementally
 
-### 2.4 Method Comparison Demos
-- [ ] Run same koans with: no training, LoRA, Share, UWSH
+### 2.5 Validation & Demos
+- [ ] Compare: baseline vs naive LoRA vs Share
 - [ ] Generate side-by-side comparison plots
-- [ ] Document method trade-offs
+- [ ] Document compression ratio (adapters → coefficients)
+- [ ] Record demo videos
 
-### 2.5 Demo Videos
-- [ ] Record 2-min Short: "This AI learns from mistakes"
-- [ ] Record 15-min explainer with plots
-- [ ] Blog post with repo link
+### Key Hyperparameters (from paper)
+- **k**: Principal factors at 60% explained variance
+- **p=1**: Pseudo-rank (higher values minimal benefit)
+- **φ=[1, k/4]**: Temporary factors range
 
 ---
 
@@ -234,11 +246,11 @@ dependencies = [
 4. **M4: Eval loop complete** - Metrics computed, gates checked ✓
 5. **M5: Full cycle works** - Day-sleep-eval-plot automated ✓
 6. **M5a: Fix catastrophic forgetting** - Implement replay buffer, conservative training ✓
-7. **M6: Learning demonstrated** - Metrics improve over 3+ cycles (IN PROGRESS)
-8. **M7: Share consolidation works** - Multiple adapters merged
+7. **M6: Learning demonstrated** - Metrics improve over 3+ cycles (**BLOCKED - needs Share**)
+8. **M7: Share consolidation works** - Multiple adapters merged (**IN PROGRESS**)
 9. **M8: Demo videos complete** - YouTube content published
 
-## Current Status (2026-02-08)
+## Current Status (2026-02-09)
 
 ### Completed
 - Phase 0: Setup ✓
@@ -246,16 +258,22 @@ dependencies = [
 - Baseline evaluation: 76.7% pass rate ✓
 - CUDA training pipeline working ✓
 - GGUF quantization and Ollama export ✓
+- Gate check script ✓
+- 12 training cycles run ✓
 
-### Issue Discovered
-First training cycle caused **16.7% regression** (catastrophic forgetting).
+### Critical Finding
+**Share algorithm not properly implemented.** After 12 cycles:
+- Best result: 73.3% (3.4% below baseline)
+- We used replay + merged adapters (NOT Share)
+- Share requires: SVD basis extraction + coefficient-only training
 
-### Corrections Applied
-See `docs/changes.md` for full details:
-- Created `scripts/prepare_training_data.py` with replay buffer
-- Created `scripts/continual_train.py` for multi-cycle training
-- Created `docs/dashboard.html` for visualization
-- Updated training config: lr=1e-4, r=8, mixed data
+See `docs/course-correction.md` for full analysis.
+
+### Next: Proper Share Implementation
+1. Generate 50 distinct task families
+2. Train adapter per family
+3. SVD-based subspace extraction
+4. Coefficient-only training for new tasks
 
 ---
 

@@ -62,16 +62,22 @@ def convert_to_gguf(
 ) -> Path:
     """Convert HuggingFace model to GGUF format."""
 
-    # Find convert script
+    # Find convert script - prefer llama.cpp's version which is more up-to-date
+    llama_cpp_converter = Path("/tmp/llama.cpp/convert_hf_to_gguf.py")
     script_dir = Path(__file__).parent.parent
-    convert_script = script_dir / "scripts" / "convert_hf_to_gguf.py"
+    local_convert_script = script_dir / "scripts" / "convert_hf_to_gguf.py"
 
-    if not convert_script.exists():
-        # Try to download it
-        logger.info("Downloading convert_hf_to_gguf.py...")
-        import urllib.request
-        url = "https://raw.githubusercontent.com/ggml-org/llama.cpp/master/convert_hf_to_gguf.py"
-        urllib.request.urlretrieve(url, convert_script)
+    if llama_cpp_converter.exists():
+        convert_script = llama_cpp_converter
+        logger.info(f"Using llama.cpp converter: {convert_script}")
+    elif local_convert_script.exists():
+        convert_script = local_convert_script
+        logger.info(f"Using local converter: {convert_script}")
+    else:
+        # Clone llama.cpp to get the converter
+        logger.info("Cloning llama.cpp to get converter...")
+        subprocess.run(["git", "clone", "--depth", "1", "https://github.com/ggml-org/llama.cpp", "/tmp/llama.cpp"], check=True)
+        convert_script = llama_cpp_converter
 
     # Convert to FP16 GGUF first
     fp16_gguf = output_path / "model-f16.gguf"
@@ -100,8 +106,19 @@ def convert_to_gguf(
         quantized_gguf = output_path / f"model-{quantize.lower()}.gguf"
         logger.info(f"Quantizing to {quantize}: {quantized_gguf}")
 
+        # Find llama-quantize binary
+        llama_quantize = Path("/tmp/llama.cpp/build/bin/llama-quantize")
+        if not llama_quantize.exists():
+            # Try to find in PATH
+            import shutil
+            llama_quantize = shutil.which("llama-quantize")
+            if llama_quantize is None:
+                logger.error("llama-quantize not found. Build llama.cpp first:")
+                logger.error("  cd /tmp/llama.cpp && mkdir build && cd build && cmake .. && make llama-quantize")
+                raise RuntimeError("llama-quantize not found")
+
         result = subprocess.run(
-            ["llama-quantize", str(fp16_gguf), str(quantized_gguf), quantize.upper()],
+            [str(llama_quantize), str(fp16_gguf), str(quantized_gguf), quantize.upper()],
             capture_output=True,
             text=True,
         )
