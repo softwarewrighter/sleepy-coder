@@ -18,6 +18,7 @@ dependencies = [
     "peft>=0.7",
     "datasets>=2.14",
     "accelerate>=0.24",
+    "bitsandbytes>=0.41",
     "matplotlib>=3.7",
     "pandas>=2.0",
     "numpy>=1.24",
@@ -32,6 +33,12 @@ dev = [
 dashboard = [
     "streamlit>=1.28",
 ]
+
+[project.scripts]
+sleepy-pact = "sleepy_pact.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["sleepy_pact"]
 
 [tool.ruff]
 line-length = 88

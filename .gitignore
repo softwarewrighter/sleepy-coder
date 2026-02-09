@@ -43,6 +43,32 @@ Thumbs.db
 /runs/*/
 /data/episodes/*.sqlite
 /data/sft/*.jsonl
+/data/episodes/*.jsonl
+/data/export/
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Model checkpoints and adapters (large binary files)
+*.bin
+*.safetensors
+*.gguf
+*.ggml
+*.pt
+*.pth
+*.ckpt
+adapter_model/
+checkpoint-*/
+adapters/
+
+# Training outputs
+/work/
+*.log
+wandb/
+mlruns/
+tensorboard/
 
 # Keep directories but ignore contents
 !/data/koans/.gitkeep
@@ -50,3 +76,14 @@ Thumbs.db
 !/data/sft/.gitkeep
 !/data/evalsets/.gitkeep
 !/runs/.gitkeep
+
+# Backups (synced to Dropbox separately)
+/backups/
+/rust/backups/
+
+# Rust CLI data (episodes, metrics)
+/rust/data/
+
+# CUDA training venv and outputs
+/cuda/.venv/
+/cuda/runs/

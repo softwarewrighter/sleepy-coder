@@ -47,6 +47,9 @@ anyhow = "1"
 # Hashing
 sha2 = "0.10"
 
+# File walking
+walkdir = "2"
+
 # Internal crates
 core_types = { path = "crates/core_types" }
 capture = { path = "crates/capture" }

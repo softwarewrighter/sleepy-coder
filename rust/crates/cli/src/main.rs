@@ -53,6 +53,10 @@ enum Commands {
         /// Model to use
         #[arg(short, long, default_value = "qwen2.5-coder:1.5b-instruct-q4_K_M")]
         model: String,
+
+        /// Save episodes to this directory
+        #[arg(long, default_value = "data/episodes")]
+        save_episodes: String,
     },
 
     /// List available koans
@@ -70,6 +74,55 @@ enum Commands {
     Show {
         /// Koan ID
         id: String,
+    },
+
+    /// Export episodes and tasks to JSONL for training
+    Export {
+        /// Output directory
+        #[arg(short, long, default_value = "data/export")]
+        output: String,
+
+        /// Export only failed episodes (for training data)
+        #[arg(long)]
+        failed_only: bool,
+
+        /// Export tasks definition
+        #[arg(long)]
+        tasks: bool,
+    },
+
+    /// Run the training pipeline (sleep = learn from mistakes)
+    Sleep {
+        /// Path to episodes JSONL for training
+        #[arg(short, long)]
+        episodes: Option<String>,
+
+        /// Path to tasks JSON file
+        #[arg(short, long)]
+        tasks: Option<String>,
+
+        /// Output directory for trained adapter
+        #[arg(short, long, default_value = "runs/adapters")]
+        output: String,
+
+        /// Quick test mode (minimal training for testing)
+        #[arg(long)]
+        quick: bool,
+
+        /// Base model to fine-tune
+        #[arg(short, long, default_value = "Qwen/Qwen2.5-Coder-1.5B-Instruct")]
+        model: String,
+    },
+
+    /// Backup data to text files (for Dropbox sync)
+    Backup {
+        /// Output directory for backup files
+        #[arg(short, long, default_value = "backups")]
+        output: String,
+
+        /// Include model checkpoints in backup
+        #[arg(long)]
+        include_models: bool,
     },
 }
 
@@ -103,14 +156,37 @@ async fn main() -> Result<()> {
             cycle,
             max_attempts,
             model,
+            save_episodes,
         } => {
-            run_eval(cycle, max_attempts, model).await?;
+            run_eval(cycle, max_attempts, model, &save_episodes).await?;
         }
         Commands::List { family, verbose } => {
             list_koans(family, verbose)?;
         }
         Commands::Show { id } => {
             show_koan(&id)?;
+        }
+        Commands::Export {
+            output,
+            failed_only,
+            tasks,
+        } => {
+            export_data(&output, failed_only, tasks)?;
+        }
+        Commands::Sleep {
+            episodes,
+            tasks,
+            output,
+            quick,
+            model,
+        } => {
+            run_sleep(episodes, tasks, &output, quick, &model)?;
+        }
+        Commands::Backup {
+            output,
+            include_models,
+        } => {
+            run_backup(&output, include_models)?;
         }
     }
 
@@ -201,8 +277,11 @@ async fn run_agent(
     Ok(())
 }
 
-async fn run_eval(cycle: u32, max_attempts: u32, model: String) -> Result<()> {
+async fn run_eval(cycle: u32, max_attempts: u32, model: String, save_dir: &str) -> Result<()> {
     use eval::{EvalConfig, EvalHarness};
+    use std::fs;
+    use std::io::Write;
+    use std::path::Path;
 
     println!("Running evaluation on frozen eval set...");
     println!("Cycle: {cycle}");
@@ -217,14 +296,25 @@ async fn run_eval(cycle: u32, max_attempts: u32, model: String) -> Result<()> {
         ),
         cycle,
         max_attempts,
-        model,
+        model: model.clone(),
     };
 
-    let harness = EvalHarness::new(config);
+    let harness = EvalHarness::new(config.clone());
     let run = harness
         .run_frozen_set()
         .await
         .context("Failed to run evaluation")?;
+
+    // Save episodes to JSONL
+    let save_path = Path::new(save_dir);
+    fs::create_dir_all(save_path)?;
+    let episodes_file = save_path.join(format!("cycle_{cycle}.jsonl"));
+    let mut writer = std::io::BufWriter::new(fs::File::create(&episodes_file)?);
+    for result in &run.task_results {
+        serde_json::to_writer(&mut writer, &result.episode)?;
+        writeln!(writer)?;
+    }
+    println!("Saved {} episodes to {}", run.task_count(), episodes_file.display());
 
     println!();
     println!("=== Evaluation Results ===");
@@ -247,6 +337,27 @@ async fn run_eval(cycle: u32, max_attempts: u32, model: String) -> Result<()> {
             }
         }
     }
+
+    // Save metrics summary
+    let metrics_file = save_path.join("metrics.jsonl");
+    let mut metrics_writer = fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&metrics_file)?;
+    if let Some(ref metrics) = run.metrics {
+        let summary = serde_json::json!({
+            "cycle": cycle,
+            "run_id": config.run_id,
+            "model": model,
+            "pass_rate": metrics.pass_rate,
+            "passed": metrics.passed,
+            "failed": metrics.failed,
+            "median_steps_to_green": metrics.median_steps_to_green,
+            "error_signatures": metrics.error_signatures,
+        });
+        writeln!(metrics_writer, "{}", serde_json::to_string(&summary)?)?;
+    }
+    println!("Metrics appended to {}", metrics_file.display());
 
     Ok(())
 }
@@ -296,6 +407,232 @@ fn show_koan(id: &str) -> Result<()> {
     println!();
     println!("--- Correct Code ---");
     println!("{}", koan.correct_code);
+
+    Ok(())
+}
+
+fn export_data(output_dir: &str, failed_only: bool, include_tasks: bool) -> Result<()> {
+    use capture::EpisodeStore;
+    use std::fs;
+    use std::path::Path;
+    use tasks_rust_koans::load_builtin_koans;
+
+    let output_path = Path::new(output_dir);
+    fs::create_dir_all(output_path)?;
+
+    // Export episodes from the store
+    let store_path = Path::new("data/episodes.db");
+    if store_path.exists() {
+        let store = EpisodeStore::open(store_path)?;
+
+        let episodes_path = if failed_only {
+            let path = output_path.join("failed_episodes.jsonl");
+            // Query failed episodes and export
+            let failed = store.query_failed_then_fixed()?;
+            println!("Found {} failed-then-fixed episodes", failed.len());
+
+            // Write to JSONL
+            let mut writer = std::io::BufWriter::new(fs::File::create(&path)?);
+            for episode in &failed {
+                use std::io::Write;
+                serde_json::to_writer(&mut writer, episode)?;
+                writeln!(writer)?;
+            }
+            path
+        } else {
+            let path = output_path.join("episodes.jsonl");
+            let count = store.export_jsonl(&path)?;
+            println!("Exported {count} episodes to {}", path.display());
+            path
+        };
+
+        println!("Episodes saved to: {}", episodes_path.display());
+    } else {
+        println!("No episode store found at {}", store_path.display());
+        println!("Run evaluations first to generate episodes.");
+    }
+
+    // Export tasks if requested
+    if include_tasks {
+        let koans = load_builtin_koans();
+        let tasks_path = output_path.join("tasks.json");
+        let file = fs::File::create(&tasks_path)?;
+        serde_json::to_writer_pretty(file, &koans)?;
+        println!("Exported {} tasks to {}", koans.len(), tasks_path.display());
+    }
+
+    Ok(())
+}
+
+fn run_sleep(
+    episodes: Option<String>,
+    tasks: Option<String>,
+    output: &str,
+    quick: bool,
+    model: &str,
+) -> Result<()> {
+    use std::process::Command;
+
+    println!("=== Sleepy Coder Training (Sleep Mode) ===");
+    println!();
+
+    // Step 1: Prepare data if not provided
+    let episodes_path = episodes.unwrap_or_else(|| "data/export/episodes.jsonl".to_string());
+    let tasks_path = tasks.unwrap_or_else(|| "data/export/tasks.json".to_string());
+
+    // Check if data exists
+    if !std::path::Path::new(&episodes_path).exists() {
+        println!("No episodes found at {episodes_path}");
+        println!("Run `sleepy-coder export` first to export training data.");
+        return Ok(());
+    }
+
+    // Step 2: Prepare SFT dataset
+    println!("Step 1: Preparing SFT dataset...");
+    let sft_output = format!("{output}/sft_data.jsonl");
+    let mut prepare_cmd = Command::new("sleepy-pact");
+    prepare_cmd
+        .args(["prepare", "-e", &episodes_path, "-o", &sft_output])
+        .args(["-t", &tasks_path]);
+
+    let status = prepare_cmd
+        .status()
+        .context("Failed to run sleepy-pact prepare. Is sleepy-pact installed?")?;
+
+    if !status.success() {
+        anyhow::bail!("sleepy-pact prepare failed");
+    }
+    println!("SFT dataset saved to {sft_output}");
+    println!();
+
+    // Step 3: Train LoRA adapter
+    println!("Step 2: Training LoRA adapter...");
+    let mut train_cmd = Command::new("sleepy-pact");
+    train_cmd
+        .args(["train", "-d", &sft_output, "-o", output, "-m", model]);
+
+    if quick {
+        train_cmd.arg("--quick");
+    }
+
+    let status = train_cmd
+        .status()
+        .context("Failed to run sleepy-pact train")?;
+
+    if !status.success() {
+        anyhow::bail!("sleepy-pact train failed");
+    }
+
+    println!();
+    println!("=== Training Complete ===");
+    println!("Adapter saved to: {output}");
+    println!();
+    println!("Next steps:");
+    println!("  1. Run evaluation: sleepy-coder eval --cycle 1");
+    println!("  2. Export for Ollama: sleepy-pact export-ollama -a {output}");
+
+    Ok(())
+}
+
+fn run_backup(output_dir: &str, include_models: bool) -> Result<()> {
+    use capture::EpisodeStore;
+    use std::fs;
+    use std::path::Path;
+
+    let output_path = Path::new(output_dir);
+    let timestamp = chrono::Utc::now().format("%Y%m%d_%H%M%S");
+    let backup_dir = output_path.join(format!("backup_{timestamp}"));
+    fs::create_dir_all(&backup_dir)?;
+
+    println!("=== Sleepy Coder Backup ===");
+    println!("Backup directory: {}", backup_dir.display());
+    println!();
+
+    // 1. Backup episodes database to JSONL
+    let db_path = Path::new("data/episodes.db");
+    if db_path.exists() {
+        let store = EpisodeStore::open(db_path)?;
+        let episodes_path = backup_dir.join("episodes.jsonl");
+        let count = store.export_jsonl(&episodes_path)?;
+        println!("Exported {count} episodes to {}", episodes_path.display());
+    } else {
+        println!("No episodes database found");
+    }
+
+    // 2. Copy episode JSONL files from data/episodes/
+    let episodes_dir = Path::new("data/episodes");
+    if episodes_dir.exists() {
+        let backup_episodes_dir = backup_dir.join("episodes");
+        fs::create_dir_all(&backup_episodes_dir)?;
+
+        let mut count = 0;
+        for entry in fs::read_dir(episodes_dir)? {
+            let entry = entry?;
+            let path = entry.path();
+            if path.extension().map(|e| e == "jsonl").unwrap_or(false) {
+                let dest = backup_episodes_dir.join(path.file_name().unwrap());
+                fs::copy(&path, &dest)?;
+                count += 1;
+            }
+        }
+        if count > 0 {
+            println!("Copied {count} episode files to {}", backup_episodes_dir.display());
+        }
+    }
+
+    // 3. Copy metrics files
+    let metrics_file = Path::new("data/episodes/metrics.jsonl");
+    if metrics_file.exists() {
+        let dest = backup_dir.join("metrics.jsonl");
+        fs::copy(metrics_file, &dest)?;
+        println!("Copied metrics to {}", dest.display());
+    }
+
+    // 4. Export tasks
+    {
+        use tasks_rust_koans::load_builtin_koans;
+        let koans = load_builtin_koans();
+        let tasks_path = backup_dir.join("tasks.json");
+        let file = fs::File::create(&tasks_path)?;
+        serde_json::to_writer_pretty(file, &koans)?;
+        println!("Exported {} tasks to {}", koans.len(), tasks_path.display());
+    }
+
+    // 5. Optionally copy model checkpoints
+    if include_models {
+        let runs_dir = Path::new("runs");
+        if runs_dir.exists() {
+            let backup_models_dir = backup_dir.join("models");
+            fs::create_dir_all(&backup_models_dir)?;
+
+            // Copy safetensors files (safe checkpoint format)
+            let mut copied = 0;
+            for entry in walkdir::WalkDir::new(runs_dir)
+                .into_iter()
+                .filter_map(|e| e.ok())
+            {
+                let path = entry.path();
+                if path.extension().map(|e| e == "safetensors").unwrap_or(false) {
+                    let relative = path.strip_prefix(runs_dir).unwrap();
+                    let dest = backup_models_dir.join(relative);
+                    if let Some(parent) = dest.parent() {
+                        fs::create_dir_all(parent)?;
+                    }
+                    fs::copy(path, &dest)?;
+                    copied += 1;
+                }
+            }
+            if copied > 0 {
+                println!("Copied {copied} model files to {}", backup_models_dir.display());
+            }
+        }
+    }
+
+    println!();
+    println!("Backup complete!");
+    println!();
+    println!("To sync to Dropbox, copy this directory:");
+    println!("  cp -r {} ~/Dropbox/sleepy-coder-backups/", backup_dir.display());
 
     Ok(())
 }
