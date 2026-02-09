@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sleepy Coder - CUDA Training Workflow</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #0d1117;
+            --card-bg: #161b22;
+            --border-color: #30363d;
+            --text-color: #c9d1d9;
+            --text-muted: #8b949e;
+            --accent-color: #58a6ff;
+            --success-color: #3fb950;
+            --warning-color: #d29922;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            color: var(--accent-color);
+            margin-bottom: 0.5rem;
+            font-size: 2rem;
+        }
+
+        h2 {
+            color: var(--text-color);
+            margin: 2rem 0 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        h3 {
+            color: var(--text-muted);
+            margin: 1.5rem 0 0.75rem;
+            font-size: 1.1rem;
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            margin-bottom: 2rem;
+        }
+
+        .diagram-container {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 1rem 0 2rem;
+            overflow-x: auto;
+        }
+
+        .mermaid {
+            display: flex;
+            justify-content: center;
+        }
+
+        .step-card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+        }
+
+        .step-card h4 {
+            color: var(--accent-color);
+            margin-bottom: 0.75rem;
+        }
+
+        .command {
+            background-color: var(--bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 0.75rem 1rem;
+            font-family: 'Fira Code', 'Consolas', monospace;
+            font-size: 0.9rem;
+            overflow-x: auto;
+            margin: 0.5rem 0;
+        }
+
+        .command code {
+            color: var(--success-color);
+        }
+
+        .note {
+            background-color: rgba(88, 166, 255, 0.1);
+            border-left: 3px solid var(--accent-color);
+            padding: 0.75rem 1rem;
+            margin: 1rem 0;
+            border-radius: 0 4px 4px 0;
+        }
+
+        .warning {
+            background-color: rgba(210, 153, 34, 0.1);
+            border-left: 3px solid var(--warning-color);
+            padding: 0.75rem 1rem;
+            margin: 1rem 0;
+            border-radius: 0 4px 4px 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+        }
+
+        th, td {
+            padding: 0.75rem;
+            text-align: left;
+            border: 1px solid var(--border-color);
+        }
+
+        th {
+            background-color: var(--card-bg);
+            color: var(--accent-color);
+        }
+
+        tr:nth-child(even) {
+            background-color: rgba(22, 27, 34, 0.5);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .badge-success {
+            background-color: rgba(63, 185, 80, 0.2);
+            color: var(--success-color);
+        }
+
+        .badge-info {
+            background-color: rgba(88, 166, 255, 0.2);
+            color: var(--accent-color);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Sleepy Coder CUDA Training Workflow</h1>
+        <p class="subtitle">Complete pipeline from training data to Ollama deployment</p>
+
+        <h2>Overview: End-to-End Pipeline</h2>
+        <div class="diagram-container">
+            <pre class="mermaid">
+flowchart LR
+    subgraph Data["1. Data Preparation"]
+        A[Rust Koans] --> B[Episode Store]
+        B --> C[SFT JSONL]
+    end
+
+    subgraph Train["2. Training"]
+        C --> D[Load Base Model]
+        D --> E[4-bit QLoRA]
+        E --> F[SFT Training]
+        F --> G[LoRA Adapter]
+    end
+
+    subgraph Export["3. Export"]
+        G --> H[Merge Adapter]
+        H --> I[HF Model]
+        I --> J[Convert GGUF]
+        J --> K[Quantize q4_K_M]
+    end
+
+    subgraph Deploy["4. Deploy"]
+        K --> L[Ollama Create]
+        L --> M[sleepy-coder-v2]
+    end
+
+    style A fill:#2d333b
+    style M fill:#238636
+            </pre>
+        </div>
+
+        <h2>Phase 1: Data Preparation</h2>
+        <div class="diagram-container">
+            <pre class="mermaid">
+flowchart TD
+    subgraph Eval["Evaluation Run"]
+        A[Run Rust Koans] --> B{Task Passed?}
+        B -->|No| C[Capture Episode]
+        B -->|Yes| D[Skip]
+        C --> E[Store in SQLite]
+    end
+
+    subgraph Export["Export to SFT Format"]
+        E --> F[Query Failed Episodes]
+        F --> G[Format as Chat]
+        G --> H[train.jsonl]
+    end
+
+    H --> I["Ready for Training"]
+
+    style C fill:#da3633
+    style D fill:#238636
+    style I fill:#58a6ff
+            </pre>
+        </div>
+
+        <div class="step-card">
+            <h4>Generate Training Data</h4>
+            <div class="command"><code>cd rust && cargo build --release</code></div>
+            <div class="command"><code>./target/release/sleepy-coder eval --cycle 0</code></div>
+            <div class="command"><code>./target/release/sleepy-coder export --output ../data/sft/train.jsonl</code></div>
+        </div>
+
+        <h2>Phase 2: QLoRA Training</h2>
+        <div class="diagram-container">
+            <pre class="mermaid">
+flowchart TD
+    subgraph Load["Model Loading"]
+        A[Qwen2.5-Coder-1.5B] --> B[4-bit Quantization]
+        B --> C[BitsAndBytes NF4]
+        C --> D[Load to GPU]
+    end
+
+    subgraph LoRA["LoRA Configuration"]
+        D --> E[Target Modules]
+        E --> F["q_proj, k_proj, v_proj, o_proj"]
+        F --> G["r=16, alpha=32"]
+    end
+
+    subgraph Training["Training Loop"]
+        G --> H[Load SFT Data]
+        H --> I[Chat Template Format]
+        I --> J[500 Steps]
+        J --> K{Loss < 0.5?}
+        K -->|Yes| L[Save Adapter]
+        K -->|No| M[Continue Training]
+        M --> J
+    end
+
+    L --> N["runs/adapters/TIMESTAMP/adapter"]
+
+    style A fill:#2d333b
+    style N fill:#238636
+            </pre>
+        </div>
+
+        <div class="step-card">
+            <h4>Training Configuration</h4>
+            <table>
+                <tr><th>Parameter</th><th>Value</th><th>Notes</th></tr>
+                <tr><td>Base Model</td><td>Qwen/Qwen2.5-Coder-1.5B-Instruct</td><td>1.5B parameter coder model</td></tr>
+                <tr><td>Quantization</td><td>4-bit NF4</td><td>QLoRA training</td></tr>
+                <tr><td>LoRA Rank (r)</td><td>16</td><td>Trainable parameters</td></tr>
+                <tr><td>LoRA Alpha</td><td>32</td><td>Scaling factor</td></tr>
+                <tr><td>Batch Size</td><td>4</td><td>For 16GB VRAM</td></tr>
+                <tr><td>Learning Rate</td><td>2e-4</td><td>With cosine schedule</td></tr>
+                <tr><td>Max Steps</td><td>500</td><td>~30-60 min on RTX 5060 Ti</td></tr>
+                <tr><td>Sequence Length</td><td>2048</td><td>Full context</td></tr>
+            </table>
+        </div>
+
+        <div class="step-card">
+            <h4>Run Training</h4>
+            <div class="command"><code>cd cuda && source .venv/bin/activate</code></div>
+            <div class="command"><code>python scripts/train.py --steps 500</code></div>
+            <div class="note">Expected: ~5700 tokens/sec, ~8GB VRAM usage, final loss ~0.18</div>
+        </div>
+
+        <h2>Phase 3: Model Export & Quantization</h2>
+        <div class="diagram-container">
+            <pre class="mermaid">
+flowchart TD
+    subgraph Merge["Adapter Merge"]
+        A[Base Model] --> B[Load Full Precision]
+        C[LoRA Adapter] --> D[Load Weights]
+        B --> E[Merge Weights]
+        D --> E
+        E --> F[HuggingFace Model]
+    end
+
+    subgraph Convert["GGUF Conversion"]
+        F --> G[llama.cpp convert]
+        G --> H[model-f16.gguf]
+        H --> I["2.9 GB"]
+    end
+
+    subgraph Quantize["Quantization"]
+        H --> J[llama-quantize]
+        J --> K[q4_K_M]
+        K --> L[model-q4_K_M.gguf]
+        L --> M["~0.9 GB"]
+    end
+
+    style A fill:#2d333b
+    style C fill:#58a6ff
+    style L fill:#238636
+            </pre>
+        </div>
+
+        <div class="step-card">
+            <h4>Quantization Options</h4>
+            <table>
+                <tr><th>Format</th><th>Size</th><th>Quality</th><th>Use Case</th></tr>
+                <tr>
+                    <td><span class="badge badge-info">q4_K_M</span></td>
+                    <td>~0.9 GB</td>
+                    <td>Good</td>
+                    <td>Recommended for inference</td>
+                </tr>
+                <tr>
+                    <td><span class="badge badge-info">q5_K_M</span></td>
+                    <td>~1.1 GB</td>
+                    <td>Better</td>
+                    <td>Higher quality</td>
+                </tr>
+                <tr>
+                    <td><span class="badge badge-info">q8_0</span></td>
+                    <td>~1.6 GB</td>
+                    <td>Best</td>
+                    <td>Maximum accuracy</td>
+                </tr>
+                <tr>
+                    <td><span class="badge badge-info">f16</span></td>
+                    <td>~2.9 GB</td>
+                    <td>Lossless</td>
+                    <td>Full precision</td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="step-card">
+            <h4>Export Commands</h4>
+            <div class="command"><code># Merge adapter into base model</code></div>
+            <div class="command"><code>python scripts/merge.py --adapter ../runs/adapters/TIMESTAMP/adapter</code></div>
+
+            <div class="command"><code># Convert to GGUF (using llama.cpp)</code></div>
+            <div class="command"><code>python /tmp/llama.cpp/convert_hf_to_gguf.py ./runs/merged/TIMESTAMP/hf_model --outfile ./runs/merged/TIMESTAMP/model-f16.gguf --outtype f16</code></div>
+
+            <div class="command"><code># Quantize to q4_K_M</code></div>
+            <div class="command"><code>/tmp/llama.cpp/build/bin/llama-quantize ./runs/merged/TIMESTAMP/model-f16.gguf ./runs/merged/TIMESTAMP/model-q4_K_M.gguf q4_K_M</code></div>
+        </div>
+
+        <h2>Phase 4: Ollama Deployment</h2>
+        <div class="diagram-container">
+            <pre class="mermaid">
+flowchart TD
+    subgraph Modelfile["Create Modelfile"]
+        A[model-q4_K_M.gguf] --> B[Write Modelfile]
+        B --> C["FROM ./model-q4_K_M.gguf"]
+        C --> D[Chat Template]
+        D --> E[Parameters]
+    end
+
+    subgraph Create["Ollama Create"]
+        E --> F[ollama create]
+        F --> G[sleepy-coder-v2]
+    end
+
+    subgraph Test["Verification"]
+        G --> H[ollama run]
+        H --> I{Works?}
+        I -->|Yes| J[Ready for Eval]
+        I -->|No| K[Debug]
+    end
+
+    style A fill:#2d333b
+    style G fill:#238636
+    style J fill:#58a6ff
+            </pre>
+        </div>
+
+        <div class="step-card">
+            <h4>Create Modelfile</h4>
+            <div class="command"><code>FROM ./model-q4_K_M.gguf
+
+TEMPLATE """&lt;|im_start|&gt;system
+{{ .System }}&lt;|im_end|&gt;
+&lt;|im_start|&gt;user
+{{ .Prompt }}&lt;|im_end|&gt;
+&lt;|im_start|&gt;assistant
+"""
+
+PARAMETER temperature 0.2
+PARAMETER top_p 0.9</code></div>
+        </div>
+
+        <div class="step-card">
+            <h4>Deploy to Ollama</h4>
+            <div class="command"><code># Create the model</code></div>
+            <div class="command"><code>cd runs/merged/TIMESTAMP && ollama create sleepy-coder-v2 -f Modelfile</code></div>
+
+            <div class="command"><code># Test it</code></div>
+            <div class="command"><code>ollama run sleepy-coder-v2 "Fix this Rust error: cannot borrow x as mutable"</code></div>
+        </div>
+
+        <h2>Phase 5: Evaluation</h2>
+        <div class="diagram-container">
+            <pre class="mermaid">
+flowchart LR
+    subgraph Eval["Evaluation Harness"]
+        A[sleepy-coder-v2] --> B[Run 42 Koans]
+        B --> C[Capture Results]
+        C --> D[Calculate Metrics]
+    end
+
+    subgraph Metrics["Results"]
+        D --> E[Pass Rate %]
+        D --> F[Steps to Green]
+        D --> G[Error Families]
+    end
+
+    subgraph Compare["Comparison"]
+        E --> H[vs Baseline]
+        H --> I{Improved?}
+        I -->|Yes| J[Cycle Complete]
+        I -->|No| K[More Training]
+    end
+
+    style A fill:#58a6ff
+    style J fill:#238636
+            </pre>
+        </div>
+
+        <div class="step-card">
+            <h4>Run Evaluation</h4>
+            <div class="command"><code>cd rust && cargo build --release</code></div>
+            <div class="command"><code>./target/release/sleepy-coder eval --cycle 2 --model sleepy-coder-v2</code></div>
+            <div class="note">Compare against cycle 0 baseline to measure improvement</div>
+        </div>
+
+        <h2>Complete Workflow Summary</h2>
+        <div class="diagram-container">
+            <pre class="mermaid">
+sequenceDiagram
+    participant User
+    participant Train as train.py
+    participant Merge as merge.py
+    participant LLAMA as llama.cpp
+    participant Ollama
+    participant Eval as sleepy-coder eval
+
+    User->>Train: python train.py --steps 500
+    Train->>Train: Load 4-bit QLoRA
+    Train->>Train: 500 training steps
+    Train-->>User: adapter saved
+
+    User->>Merge: python merge.py --adapter
+    Merge->>Merge: Merge LoRA + Base
+    Merge-->>User: HF model saved
+
+    User->>LLAMA: convert_hf_to_gguf.py
+    LLAMA-->>User: model-f16.gguf
+
+    User->>LLAMA: llama-quantize q4_K_M
+    LLAMA-->>User: model-q4_K_M.gguf
+
+    User->>Ollama: ollama create sleepy-coder-v2
+    Ollama-->>User: Model created
+
+    User->>Eval: eval --model sleepy-coder-v2
+    Eval->>Ollama: Run 42 koans
+    Ollama-->>Eval: Results
+    Eval-->>User: Pass rate, metrics
+            </pre>
+        </div>
+
+        <div class="warning">
+            <strong>Important:</strong> Always use <code>uv pip</code> instead of <code>pip</code> for package management in this project.
+        </div>
+
+        <h3>GPU Requirements</h3>
+        <table>
+            <tr><th>GPU</th><th>VRAM</th><th>Batch Size</th><th>Training Speed</th></tr>
+            <tr><td>RTX 5060 Ti</td><td>16 GB</td><td>4</td><td>~5700 tokens/sec</td></tr>
+            <tr><td>RTX 4090</td><td>24 GB</td><td>8</td><td>~15000 tokens/sec</td></tr>
+            <tr><td>RTX 3090</td><td>24 GB</td><td>8</td><td>~10000 tokens/sec</td></tr>
+            <tr><td>RTX 4070</td><td>12 GB</td><td>2</td><td>~3000 tokens/sec</td></tr>
+        </table>
+    </div>
+
+    <script>
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'dark',
+            themeVariables: {
+                primaryColor: '#58a6ff',
+                primaryTextColor: '#c9d1d9',
+                primaryBorderColor: '#30363d',
+                lineColor: '#8b949e',
+                secondaryColor: '#161b22',
+                tertiaryColor: '#0d1117',
+                background: '#0d1117',
+                mainBkg: '#161b22',
+                nodeBorder: '#30363d',
+                clusterBkg: '#161b22',
+                clusterBorder: '#30363d',
+                titleColor: '#c9d1d9',
+                edgeLabelBackground: '#161b22'
+            },
+            flowchart: {
+                curve: 'basis',
+                padding: 20
+            },
+            sequence: {
+                actorMargin: 50,
+                boxMargin: 10,
+                mirrorActors: false
+            }
+        });
+    </script>
+</body>
+</html>

@@ -2,6 +2,8 @@
 
 This directory contains scripts for training sleepy-coder on a Linux workstation with NVIDIA GPU.
 
+> **Visual Workflow Guide**: See [docs/workflow.html](docs/workflow.html) for interactive diagrams showing the complete training and export pipeline.
+
 ## Quick Start
 
 ```bash
@@ -46,10 +48,17 @@ python scripts/continue_training.py --checkpoint ./runs/adapters/20260208_163226
 
 - **Linux** with NVIDIA GPU (8GB+ VRAM recommended)
 - **NVIDIA Driver** 525+
-- **CUDA Toolkit** 11.8 or 12.x
+- **CUDA Toolkit** 12.x or 13.x
 - **Python** 3.10+
+- **uv** - Fast Python package manager (required, do NOT use pip directly)
 - **Ollama** (for evaluation)
 - **Rust** (optional, for eval harness)
+
+### Install uv
+
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
 
 ## Directory Structure
 
@@ -194,7 +203,8 @@ python -c "import torch; print(torch.cuda.is_available())"
 
 If PyTorch doesn't see CUDA, reinstall with CUDA support:
 ```bash
-pip install torch --index-url https://download.pytorch.org/whl/cu121
+# IMPORTANT: Always use uv pip, never pip directly
+uv pip install torch --index-url https://download.pytorch.org/whl/cu128
 ```
 
 ### Out of Memory
@@ -245,6 +255,31 @@ With Weights & Biases (optional):
 wandb login
 python scripts/train.py --wandb --steps 500
 ```
+
+## GPU Optimization
+
+### Flash Attention
+
+The scripts use PyTorch's built-in SDPA (Scaled Dot Product Attention) which automatically uses Flash Attention kernels when available. This is enabled via `attn_implementation="sdpa"`.
+
+### Quantization
+
+| Use Case | Quant | Memory | Notes |
+|----------|-------|--------|-------|
+| Fine-tuning | 4-bit NF4 | ~0.8GB | QLoRA standard, leaves room for optimizer |
+| Ollama inference | q4_K_M | ~0.9GB | Good speed/quality balance |
+| Higher quality | q8_0 | ~1.6GB | Better accuracy |
+
+### Recommended Settings by GPU
+
+| GPU | VRAM | Batch | Seq Len | Peak VRAM | Tokens/s |
+|-----|------|-------|---------|-----------|----------|
+| RTX 3090 | 24GB | 8 | 2048 | ~12GB | ~10k |
+| RTX 4090 | 24GB | 8 | 2048 | ~12GB | ~15k |
+| RTX 5060 Ti | 16GB | 4 | 2048 | ~8GB | ~5.7k |
+| RTX 4070 | 12GB | 2 | 2048 | ~5GB | ~3k |
+
+Note: Uses 4-bit QLoRA with gradient checkpointing and SDPA (Flash Attention).
 
 ## Next Steps After Training
 

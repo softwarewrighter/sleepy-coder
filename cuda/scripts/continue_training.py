@@ -15,8 +15,8 @@ from pathlib import Path
 import torch
 from datasets import Dataset
 from peft import PeftModel
-from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig, TrainingArguments
-from trl import SFTTrainer
+from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+from trl import SFTTrainer, SFTConfig
 
 logging.basicConfig(
     level=logging.INFO,
@@ -130,7 +130,7 @@ def main():
 
     # Training args
     total_steps = current_step + args.steps
-    training_args = TrainingArguments(
+    sft_config = SFTConfig(
         output_dir=str(new_run_dir),
         max_steps=total_steps,
         per_device_train_batch_size=args.batch_size,
@@ -141,20 +141,20 @@ def main():
         logging_steps=10,
         save_steps=100,
         save_total_limit=3,
-        fp16=True,
+        bf16=True,
         optim="paged_adamw_32bit",
         lr_scheduler_type="cosine",
         report_to="none",
+        max_length=2048,
+        dataset_text_field="text",
     )
 
     # Trainer
     trainer = SFTTrainer(
         model=model,
-        args=training_args,
+        args=sft_config,
         train_dataset=dataset,
-        tokenizer=tokenizer,
-        max_seq_length=2048,
-        dataset_text_field="text",
+        processing_class=tokenizer,
     )
 
     # Resume training

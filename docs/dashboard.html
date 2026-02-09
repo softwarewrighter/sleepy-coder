@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sleepy-Coder: Continual Learning Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-primary: #0d1117;
+            --bg-secondary: #161b22;
+            --bg-tertiary: #21262d;
+            --text-primary: #e6edf3;
+            --text-secondary: #8b949e;
+            --accent-blue: #58a6ff;
+            --accent-green: #3fb950;
+            --accent-red: #f85149;
+            --accent-yellow: #d29922;
+            --accent-purple: #a371f7;
+            --border: #30363d;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.5;
+            min-height: 100vh;
+        }
+
+        .header {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            padding: 24px 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .header h1 span {
+            font-size: 28px;
+        }
+
+        .status-badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+        }
+
+        .status-badge.running {
+            background: rgba(56, 139, 253, 0.15);
+            border-color: var(--accent-blue);
+            color: var(--accent-blue);
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 32px;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+
+        .metric-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .metric-value {
+            font-size: 36px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .metric-value.positive { color: var(--accent-green); }
+        .metric-value.negative { color: var(--accent-red); }
+        .metric-value.neutral { color: var(--accent-blue); }
+
+        .metric-label {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        .metric-change {
+            font-size: 12px;
+            margin-top: 8px;
+            padding: 2px 8px;
+            border-radius: 10px;
+            display: inline-block;
+        }
+
+        .metric-change.up {
+            background: rgba(63, 185, 80, 0.15);
+            color: var(--accent-green);
+        }
+
+        .metric-change.down {
+            background: rgba(248, 81, 73, 0.15);
+            color: var(--accent-red);
+        }
+
+        .charts-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+
+        .chart-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+        }
+
+        .chart-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+        }
+
+        .timeline {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+        }
+
+        .timeline-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+
+        .timeline-item {
+            display: flex;
+            gap: 16px;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .timeline-item:last-child {
+            border-bottom: none;
+        }
+
+        .timeline-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-top: 4px;
+            flex-shrink: 0;
+        }
+
+        .timeline-dot.success { background: var(--accent-green); }
+        .timeline-dot.failure { background: var(--accent-red); }
+        .timeline-dot.pending { background: var(--text-secondary); }
+
+        .timeline-content {
+            flex: 1;
+        }
+
+        .timeline-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 4px;
+        }
+
+        .timeline-title-text {
+            font-weight: 500;
+        }
+
+        .timeline-time {
+            color: var(--text-secondary);
+            font-size: 12px;
+        }
+
+        .timeline-details {
+            color: var(--text-secondary);
+            font-size: 13px;
+        }
+
+        .research-section {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 32px;
+        }
+
+        .research-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .technique-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+        }
+
+        .technique-card {
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            padding: 16px;
+        }
+
+        .technique-name {
+            font-weight: 500;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .technique-status {
+            font-size: 11px;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        .technique-status.active {
+            background: rgba(63, 185, 80, 0.15);
+            color: var(--accent-green);
+        }
+
+        .technique-status.planned {
+            background: rgba(210, 153, 34, 0.15);
+            color: var(--accent-yellow);
+        }
+
+        .technique-desc {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .code-block {
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px;
+            margin-top: 24px;
+            font-family: 'SF Mono', 'Monaco', 'Inconsolata', monospace;
+            font-size: 13px;
+            overflow-x: auto;
+        }
+
+        .code-block .comment { color: var(--text-secondary); }
+        .code-block .command { color: var(--accent-green); }
+        .code-block .flag { color: var(--accent-blue); }
+
+        footer {
+            text-align: center;
+            padding: 32px;
+            color: var(--text-secondary);
+            font-size: 13px;
+        }
+
+        footer a {
+            color: var(--accent-blue);
+            text-decoration: none;
+        }
+
+        @media (max-width: 1200px) {
+            .metrics-grid { grid-template-columns: repeat(2, 1fr); }
+            .charts-grid { grid-template-columns: 1fr; }
+            .technique-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <h1><span>&#129302;</span> Sleepy-Coder Dashboard</h1>
+        <span class="status-badge running">Continual Learning Active</span>
+    </header>
+
+    <main class="container">
+        <!-- Key Metrics -->
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-value neutral" id="baseline-rate">76.7%</div>
+                <div class="metric-label">Baseline Pass Rate</div>
+                <div class="metric-change">Cycle 0</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value negative" id="current-rate">60.0%</div>
+                <div class="metric-label">Current Pass Rate</div>
+                <div class="metric-change down" id="change-badge">-16.7%</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value neutral" id="total-cycles">2</div>
+                <div class="metric-label">Training Cycles</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value neutral" id="total-episodes">60</div>
+                <div class="metric-label">Total Episodes</div>
+            </div>
+        </div>
+
+        <!-- Charts -->
+        <div class="charts-grid">
+            <div class="chart-card">
+                <div class="chart-title">
+                    <span>&#128200;</span> Learning Curve
+                </div>
+                <div class="chart-container">
+                    <canvas id="learningCurve"></canvas>
+                </div>
+            </div>
+            <div class="chart-card">
+                <div class="chart-title">
+                    <span>&#128202;</span> Task Outcomes
+                </div>
+                <div class="chart-container">
+                    <canvas id="outcomeChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Research Techniques -->
+        <div class="research-section">
+            <div class="research-title">
+                <span>&#128218;</span> Applied Research Techniques
+            </div>
+            <div class="technique-grid">
+                <div class="technique-card">
+                    <div class="technique-name">
+                        Replay Buffer
+                        <span class="technique-status planned">Planned</span>
+                    </div>
+                    <div class="technique-desc">
+                        Mix 50% replay data from original training to prevent forgetting.
+                        Based on <a href="https://openreview.net/pdf?id=IgZWU75BLL" target="_blank">SURE 2024</a>.
+                    </div>
+                </div>
+                <div class="technique-card">
+                    <div class="technique-name">
+                        Self-Synthesized Rehearsal
+                        <span class="technique-status planned">Planned</span>
+                    </div>
+                    <div class="technique-desc">
+                        Use LLM to generate synthetic training examples.
+                        Based on <a href="https://aclanthology.org/2024.acl-long.77/" target="_blank">ACL 2024</a>.
+                    </div>
+                </div>
+                <div class="technique-card">
+                    <div class="technique-name">
+                        Lower LoRA Rank
+                        <span class="technique-status planned">Planned</span>
+                    </div>
+                    <div class="technique-desc">
+                        Use r=8 instead of r=16 for more conservative updates.
+                        Reduces catastrophic forgetting risk.
+                    </div>
+                </div>
+                <div class="technique-card">
+                    <div class="technique-name">
+                        Learning Rate Decay
+                        <span class="technique-status planned">Planned</span>
+                    </div>
+                    <div class="technique-desc">
+                        Start with 1e-4, decay 10% per cycle.
+                        Smaller updates as model improves.
+                    </div>
+                </div>
+                <div class="technique-card">
+                    <div class="technique-name">
+                        Mixed Data Training
+                        <span class="technique-status planned">Planned</span>
+                    </div>
+                    <div class="technique-desc">
+                        Train on both successful AND failed examples.
+                        Ratio: 50% replay, 25% success, 25% failure.
+                    </div>
+                </div>
+                <div class="technique-card">
+                    <div class="technique-name">
+                        Multi-Cycle Evaluation
+                        <span class="technique-status active">Active</span>
+                    </div>
+                    <div class="technique-desc">
+                        Evaluate after each training cycle.
+                        Track progress over time with frozen eval set.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Timeline -->
+        <div class="timeline">
+            <div class="timeline-title">&#128337; Training Timeline</div>
+            <div class="timeline-item">
+                <div class="timeline-dot success"></div>
+                <div class="timeline-content">
+                    <div class="timeline-header">
+                        <span class="timeline-title-text">Cycle 0: Baseline Evaluation</span>
+                        <span class="timeline-time">Feb 9, 2026 03:51</span>
+                    </div>
+                    <div class="timeline-details">
+                        Model: qwen2.5-coder:1.5b-instruct-q4_K_M | Pass Rate: 76.7% (23/30)
+                    </div>
+                </div>
+            </div>
+            <div class="timeline-item">
+                <div class="timeline-dot failure"></div>
+                <div class="timeline-content">
+                    <div class="timeline-header">
+                        <span class="timeline-title-text">Cycle 1: First Training (Naive SFT)</span>
+                        <span class="timeline-time">Feb 9, 2026 03:51</span>
+                    </div>
+                    <div class="timeline-details">
+                        Model: sleepy-coder-v2 | Pass Rate: 60.0% (18/30) | <span style="color: var(--accent-red);">Regression: -16.7%</span>
+                    </div>
+                </div>
+            </div>
+            <div class="timeline-item">
+                <div class="timeline-dot pending"></div>
+                <div class="timeline-content">
+                    <div class="timeline-header">
+                        <span class="timeline-title-text">Cycle 2: Replay Buffer Training</span>
+                        <span class="timeline-time">Pending</span>
+                    </div>
+                    <div class="timeline-details">
+                        Will apply: replay buffer (50%), lower LR (1e-4), mixed data
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- How to Run -->
+        <div class="code-block">
+            <span class="comment"># Run the improved continual learning pipeline</span><br>
+            <span class="command">python</span> scripts/continual_train.py <span class="flag">--cycles</span> 5 <span class="flag">--replay-ratio</span> 0.5<br><br>
+            <span class="comment"># Or run a single improved training cycle</span><br>
+            <span class="command">cd</span> cuda && <span class="command">python</span> scripts/train.py <span class="flag">--steps</span> 100 <span class="flag">--lr</span> 1e-4
+        </div>
+    </main>
+
+    <footer>
+        <p>Sleepy-Coder: Continual Learning for Code Generation</p>
+        <p>Research: <a href="https://aclanthology.org/2024.acl-long.77/">SSR (ACL 2024)</a> | <a href="https://openreview.net/pdf?id=IgZWU75BLL">SURE (2024)</a> | <a href="https://arxiv.org/abs/2403.01244">Catastrophic Forgetting</a></p>
+    </footer>
+
+    <script>
+        // Sample data - will be updated by Python scripts
+        const metricsData = {
+            cycles: [0, 1],
+            passRates: [76.7, 60.0],
+            passed: [23, 18],
+            failed: [7, 12],
+            models: ["qwen2.5-coder", "sleepy-coder-v2"]
+        };
+
+        // Learning Curve Chart
+        const learningCtx = document.getElementById('learningCurve').getContext('2d');
+        new Chart(learningCtx, {
+            type: 'line',
+            data: {
+                labels: metricsData.cycles.map(c => `Cycle ${c}`),
+                datasets: [{
+                    label: 'Pass Rate (%)',
+                    data: metricsData.passRates,
+                    borderColor: '#58a6ff',
+                    backgroundColor: 'rgba(88, 166, 255, 0.1)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 6,
+                    pointBackgroundColor: metricsData.passRates.map((rate, i) =>
+                        i === 0 ? '#58a6ff' : (rate >= metricsData.passRates[0] ? '#3fb950' : '#f85149')
+                    ),
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2
+                }, {
+                    label: 'Baseline',
+                    data: metricsData.cycles.map(() => metricsData.passRates[0]),
+                    borderColor: 'rgba(248, 81, 73, 0.5)',
+                    borderDash: [5, 5],
+                    borderWidth: 2,
+                    fill: false,
+                    pointRadius: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        labels: { color: '#e6edf3' }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            afterLabel: function(context) {
+                                if (context.datasetIndex === 0) {
+                                    const model = metricsData.models[context.dataIndex];
+                                    return `Model: ${model}`;
+                                }
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        min: 0,
+                        max: 100,
+                        grid: { color: 'rgba(139, 148, 158, 0.1)' },
+                        ticks: { color: '#8b949e' }
+                    },
+                    x: {
+                        grid: { color: 'rgba(139, 148, 158, 0.1)' },
+                        ticks: { color: '#8b949e' }
+                    }
+                }
+            }
+        });
+
+        // Outcome Chart
+        const outcomeCtx = document.getElementById('outcomeChart').getContext('2d');
+        new Chart(outcomeCtx, {
+            type: 'bar',
+            data: {
+                labels: metricsData.cycles.map(c => `Cycle ${c}`),
+                datasets: [{
+                    label: 'Passed',
+                    data: metricsData.passed,
+                    backgroundColor: '#3fb950',
+                    borderRadius: 4
+                }, {
+                    label: 'Failed',
+                    data: metricsData.failed,
+                    backgroundColor: '#f85149',
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        labels: { color: '#e6edf3' }
+                    }
+                },
+                scales: {
+                    y: {
+                        stacked: true,
+                        grid: { color: 'rgba(139, 148, 158, 0.1)' },
+                        ticks: { color: '#8b949e' }
+                    },
+                    x: {
+                        stacked: true,
+                        grid: { display: false },
+                        ticks: { color: '#8b949e' }
+                    }
+                }
+            }
+        });
+
+        // Update metrics display based on data
+        function updateMetrics(data) {
+            const baseline = data.passRates[0];
+            const current = data.passRates[data.passRates.length - 1];
+            const change = current - baseline;
+
+            document.getElementById('current-rate').textContent = `${current.toFixed(1)}%`;
+            document.getElementById('current-rate').className =
+                `metric-value ${change >= 0 ? 'positive' : 'negative'}`;
+
+            const changeBadge = document.getElementById('change-badge');
+            changeBadge.textContent = `${change >= 0 ? '+' : ''}${change.toFixed(1)}%`;
+            changeBadge.className = `metric-change ${change >= 0 ? 'up' : 'down'}`;
+
+            document.getElementById('total-cycles').textContent = data.cycles.length;
+            document.getElementById('total-episodes').textContent =
+                data.passed.reduce((a, b) => a + b, 0) + data.failed.reduce((a, b) => a + b, 0);
+        }
+
+        updateMetrics(metricsData);
+    </script>
+</body>
+</html>

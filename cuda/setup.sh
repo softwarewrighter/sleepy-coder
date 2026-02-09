@@ -34,12 +34,20 @@ if [ ! -d "$VENV_DIR" ]; then
     python3 -m venv "$VENV_DIR"
 fi
 
+# Check for uv
+if ! command -v uv &> /dev/null; then
+    echo ""
+    echo "=== Installing uv (fast Python package manager) ==="
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+    export PATH="$HOME/.local/bin:$PATH"
+fi
+
 # Activate and install dependencies
 echo ""
-echo "=== Installing dependencies ==="
+echo "=== Installing dependencies (using uv pip) ==="
 source "$VENV_DIR/bin/activate"
-pip install --upgrade pip
-pip install -r "$SCRIPT_DIR/requirements.txt"
+uv pip install --upgrade pip
+uv pip install -r "$SCRIPT_DIR/requirements.txt"
 
 # Verify CUDA is available to PyTorch
 echo ""

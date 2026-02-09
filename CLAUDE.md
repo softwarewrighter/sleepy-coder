@@ -80,6 +80,28 @@ cd rust && cargo run -- eval --cycle 0
 - rustfmt for formatting
 - Markdown validation for docs
 
+## CRITICAL: Package Management
+
+**NEVER use `pip` directly. ALWAYS use `uv pip` instead.**
+
+This is required because:
+1. `uv` is significantly faster than pip
+2. Consistent dependency resolution across environments
+3. Project standard - no exceptions
+
+```bash
+# WRONG - Never do this
+pip install torch
+pip show package
+
+# CORRECT - Always do this
+uv pip install torch
+uv pip show package
+
+# Setup uv if not installed
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
 ## Test Coverage
 
 Total: 72 tests across 7 crates

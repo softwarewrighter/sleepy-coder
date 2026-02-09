@@ -1,166 +1,82 @@
-# Results: Sleepy Coder Training Progress
+# Sleepy-Coder Evaluation Results
 
-## Baseline (Before Training)
+*Generated: 2026-02-08 19:55:15*
 
-### Model: qwen2.5-coder:1.5b
+## Summary
 
-| Metric | Value | Notes |
-|--------|-------|-------|
-| Pass Rate (5 borrow koans) | 80% (4/5) | Initial test run |
-| Pass Rate (30 frozen eval) | 66.7% (20/30) | Full baseline |
-| Median Steps to Green | 2.0 | Most solved in 2 attempts |
-| Date | 2026-02-08 | Phase 1 MVP complete |
+| Cycle | Model | Pass Rate | Passed | Failed | Median Steps |
+|-------|-------|-----------|--------|--------|--------------|
+| 0 | qwen2.5-coder:1.5b-instruct-q4_K_M | 76.7% | 23 | 7 | 2.0 |
+| 1 | sleepy-coder-v2 | 60.0% | 18 | 12 | 2.0 |
 
-### Initial Quick Test (5 borrow koans)
+## Analysis
 
+**Regression: -16.7%** (76.7% → 60.0%)
+
+### Possible Causes of Regression:
+
+1. **Insufficient training data**: Only 23 failed episodes used for training
+2. **Overfitting to training distribution**: Model may have overfit to specific error patterns
+3. **Catastrophic forgetting**: Fine-tuning may have degraded general capabilities
+4. **Training hyperparameters**: Learning rate or steps may need tuning
+5. **Data quality**: Training on failed examples may include poor patterns
+
+### What the Research Says
+
+The regression we observed is a well-documented phenomenon called **catastrophic forgetting**. According to [2024 EMNLP research](https://aclanthology.org/2024.findings-emnlp.249/), there is a direct link between the flatness of the model's loss landscape and the extent of catastrophic forgetting.
+
+Key findings from the literature:
+
+1. **LoRA doesn't prevent forgetting**: While LoRA keeps the backbone frozen, [research shows](https://arxiv.org/abs/2403.01244) significant performance drops still occur when fine-tuning on sequential datasets.
+
+2. **Replay outperforms regularization**: [Studies consistently show](https://openreview.net/pdf?id=IgZWU75BLL) that replay-based methods (mixing old + new data) outperform regularization-based methods like EWC and O-LoRA.
+
+3. **RL generalizes better than SFT**: [2024 research](https://arxiv.org/html/2508.16546v1) indicates that RL methods (PPO) exhibit better generalization compared to supervised fine-tuning, which tends to memorize training data.
+
+4. **Self-Synthesized Rehearsal (SSR)**: [ACL 2024](https://aclanthology.org/2024.acl-long.77/) proposes using the LLM itself to generate synthetic instances for rehearsal, achieving superior performance while being more data-efficient.
+
+### Why Our Approach Failed
+
+Our current implementation has several issues the literature warns about:
+
+| Issue | Our Implementation | What Research Recommends |
+|-------|-------------------|-------------------------|
+| Training data | Only failed examples (23 episodes) | Mix of successful + failed examples |
+| Data replay | None | Include base model training data |
+| Method | Pure SFT | RL-based (PPO, DPO) or SSR |
+| Data volume | 23 examples | Hundreds to thousands |
+| Regularization | None | EWC, sharpness-aware minimization |
+
+### Recommended Next Steps (Research-Backed)
+
+1. **Add replay buffer**: Mix successful episodes with failed ones (recommended ratio 1:1 or higher)
+2. **Use Self-Synthesized Rehearsal**: Generate synthetic training data from the base model
+3. **Try RL-based fine-tuning**: Use DPO or PPO instead of pure SFT
+4. **Apply EWCLoRA**: Combine EWC with LoRA to preserve important weights
+5. **Sharpness-aware minimization**: Flatten loss landscape during training
+6. **Generate more data**: Run many more evaluation cycles before training
+7. **Lower learning rate**: Try 1e-4 or 5e-5 instead of 2e-4
+8. **Quality filtering**: Only train on high-quality corrections, not all failures
+
+## Results Plot
+
+![Evaluation Results](results.png)
+
+## Training Configuration
+
+| Parameter | Value |
+|-----------|-------|
+| Base Model | Qwen2.5-Coder-1.5B-Instruct |
+| LoRA Rank | 16 |
+| LoRA Alpha | 32 |
+| Training Steps | 500 |
+| Learning Rate | 2e-4 |
+| Batch Size | 4 |
+| Quantization | 4-bit NF4 (QLoRA) |
+
+## Raw Data
+
+```json
+{"cycle": 0, "error_signatures": {"max_attempts_exceeded": 7}, "failed": 7, "median_steps_to_green": 2.0, "model": "qwen2.5-coder:1.5b-instruct-q4_K_M", "pass_rate": 0.7666666666666667, "passed": 23, "run_id": "eval_cycle0_20260209_035102"}
+{"cycle": 1, "error_signatures": {"max_attempts_exceeded": 12}, "failed": 12, "median_steps_to_green": 2.0, "model": "sleepy-coder-v2", "pass_rate": 0.6, "passed": 18, "run_id": "eval_cycle1_20260209_035157"}
 ```
-[1/5] bc_001 ... PASS (attempts: 2)
-[2/5] bc_003 ... FAIL (max attempts reached)
-[3/5] bc_005 ... PASS (attempts: 2)
-[4/5] bc_007 ... PASS (attempts: 2)
-[5/5] bc_009 ... PASS (attempts: 2)
-```
-
----
-
-## Training Cycles
-
-### Cycle 0: Baseline Evaluation (Frozen Eval Set)
-
-| Metric | Run 1 | Run 2 | Notes |
-|--------|-------|-------|-------|
-| Tasks Evaluated | 30 | 30 | |
-| Pass Rate | 66.7% (20/30) | 76.7% (23/30) | Variance due to LLM non-determinism |
-| Failed | 10 | 7 | |
-| Repeat Error Rate | N/A | N/A | First cycle |
-| Median Steps to Green | 2.0 | 2.0 | Consistent |
-
-**Error Signatures:**
-- `max_attempts_exceeded`: 7-10 tasks (varies by run)
-
-**Note**: Model outputs are non-deterministic, so baseline results may vary ~10% between runs.
-
-### Cycle 1: First Training (Quick Test - 50 Steps)
-
-**Training Config:**
-- Steps: 50 (quick validation run)
-- Training samples: 23 episodes
-- Duration: ~25 min on Mac M-series
-- Loss: 2.35 → 0.72 (69% reduction)
-
-| Metric | Before | After | Delta |
-|--------|--------|-------|-------|
-| Pass Rate | 66.7% | 66.7% | 0% |
-| Median Steps | 2.0 | 2.0 | 0 |
-| Repeat Error Rate | N/A | TBD | TBD |
-
-**Analysis:** No improvement with 50 training steps. This is expected - the model needs more training data and iterations. The loss dropped significantly (69%) suggesting the model is learning, but not enough to generalize to the eval set yet.
-
----
-
-## Frozen Eval Set Performance
-
-The frozen eval set contains 30 koans (10 borrow_checker, 10 trait_bounds, 10 result_handling).
-
-| Cycle | Pass Rate | Passed | Failed | Regression? |
-|-------|-----------|--------|--------|-------------|
-| 0 | 66.7% | 20 | 10 | N/A (baseline) |
-| 1 | 66.7% | 20 | 10 | No change |
-| 2 | TBD | TBD | TBD | TBD |
-
----
-
-## Error Signature Analysis
-
-Most common error signatures across cycles:
-
-| Signature | Cycle 0 | Cycle 1 | Trend |
-|-----------|---------|---------|-------|
-| max_attempts_exceeded | 10 | 10 | No change |
-
----
-
-## Training Metrics
-
-| Cycle | Steps | Initial Loss | Final Loss | Duration | Examples |
-|-------|-------|--------------|------------|----------|----------|
-| 1 | 50 | 2.35 | 0.72 | 25 min | 23 |
-| 2 | TBD | TBD | TBD | TBD | TBD |
-
-### Loss Curve (Cycle 1)
-```
-Loss │
-2.3  │ ●●●
-2.1  │    ●
-2.0  │     ●
-1.7  │      ●
-1.6  │       ●
-1.2  │        ●
-1.0  │         ●
-0.7  │          ●  ← Final
-     └─────────────────
-       5  10 15 20 25 30 35 40 45 50  Steps
-```
-
----
-
-## Visualizations
-
-Plots will be saved to `viz/` directory:
-- `pass_rate_by_cycle.png` - Pass rate improvement
-- `steps_to_green_by_cycle.png` - Efficiency improvement
-- `repeat_error_rate_by_cycle.png` - Learning from mistakes
-- `error_distribution.png` - Error type breakdown
-- `before_after_comparison.png` - Before/after comparison
-
----
-
-## Key Observations
-
-### Baseline Analysis
-
-1. **Pass Rate**: 66.7% (20/30) on frozen eval set
-2. **Efficiency**: Most successful fixes in 2 attempts
-3. **Failure Mode**: All 10 failures hit max attempts limit (5)
-4. **Target**: Improve pass rate to >90% while maintaining low steps-to-green
-
-### Next Steps
-
-1. ✅ Export failed episodes for training data
-2. ✅ Create SFT dataset from successful fixes
-3. ✅ Train LoRA adapter on the data (50 steps, quick test)
-4. ✅ Re-evaluate on frozen set to measure improvement (no change yet)
-5. **Train longer** (500-1000 steps) to see measurable improvement
-
----
-
-## Cost Estimates for Further Progress
-
-### Mac M-series (Current Setup)
-| Training Steps | Duration | Expected Result |
-|----------------|----------|-----------------|
-| 50 (done) | 25 min | No change |
-| 500 | ~4 hours | Potentially 5-10% improvement |
-| 1000 | ~8 hours | Potentially 10-20% improvement |
-| 5000 | ~40 hours | Target: 80%+ pass rate |
-
-### NVIDIA GPU (Linux Workstation)
-Estimated 5-10x speedup vs Mac:
-| Training Steps | Duration | Improvement |
-|----------------|----------|-------------|
-| 500 | ~25-50 min | 5-10% |
-| 1000 | ~50-100 min | 10-20% |
-| 5000 | ~4-8 hours | Target: 80%+ |
-
-### Validation Decision Point
-
-**When to move to CUDA:**
-- If 500 Mac steps (4 hours) show ANY improvement → validate on Mac, then scale on CUDA
-- If 500 Mac steps show NO improvement → investigate data quality before investing more compute
-
-### Key Variables for Success
-
-1. **Training Data Quality**: 23 examples is very small. Need more diverse examples.
-2. **Training Steps**: 50 is too few for generalization. Need 500+ minimum.
-3. **Learning Rate**: Current 2e-4 may need tuning.
-4. **Data Diversity**: Currently only training on failed episodes from baseline. Need to add synthetic examples or more varied tasks.

@@ -25,9 +25,8 @@ from transformers import (
     AutoModelForCausalLM,
     AutoTokenizer,
     BitsAndBytesConfig,
-    TrainingArguments,
 )
-from trl import SFTTrainer
+from trl import SFTTrainer, SFTConfig
 
 logging.basicConfig(
     level=logging.INFO,
@@ -51,16 +50,17 @@ class TrainConfig:
 
     # Training
     max_steps: int = 500
-    batch_size: int = 4  # Higher for CUDA
-    gradient_accumulation_steps: int = 2
+    batch_size: int = 4  # Works well on 16GB+ GPUs
+    gradient_accumulation_steps: int = 1  # Increase if OOM
     learning_rate: float = 2e-4
     warmup_steps: int = 50
-    max_seq_length: int = 2048
+    max_seq_length: int = 2048  # Full context for code
     weight_decay: float = 0.01
+    gradient_checkpointing: bool = True  # Saves memory
 
     # Quantization
     use_4bit: bool = True
-    bnb_4bit_compute_dtype: str = "float16"
+    bnb_4bit_compute_dtype: str = "bfloat16"
     bnb_4bit_quant_type: str = "nf4"
 
     # Checkpointing
@@ -216,6 +216,7 @@ def main():
         quantization_config=bnb_config,
         device_map="auto",
         trust_remote_code=True,
+        attn_implementation="sdpa",  # Use Flash SDPA
     )
     model.config.use_cache = False
 
@@ -247,7 +248,7 @@ def main():
     dataset = prepare_sft_dataset(examples, tokenizer)
 
     # Training arguments
-    training_args = TrainingArguments(
+    sft_config = SFTConfig(
         output_dir=str(run_dir),
         max_steps=config.max_steps,
         per_device_train_batch_size=config.batch_size,
@@ -258,22 +259,23 @@ def main():
         logging_steps=config.logging_steps,
         save_steps=config.save_steps,
         save_total_limit=3,
-        fp16=True,
+        bf16=True,
         optim="paged_adamw_32bit",
         lr_scheduler_type="cosine",
         seed=config.seed,
         report_to="wandb" if config.use_wandb else "none",
         run_name=run_id if config.use_wandb else None,
+        max_length=config.max_seq_length,
+        dataset_text_field="text",
+        gradient_checkpointing=config.gradient_checkpointing,
     )
 
     # Trainer
     trainer = SFTTrainer(
         model=model,
-        args=training_args,
+        args=sft_config,
         train_dataset=dataset,
-        tokenizer=tokenizer,
-        max_seq_length=config.max_seq_length,
-        dataset_text_field="text",
+        processing_class=tokenizer,
     )
 
     # Train

@@ -81,7 +81,7 @@ def check_model_loading():
         bnb_config = BitsAndBytesConfig(
             load_in_4bit=True,
             bnb_4bit_quant_type="nf4",
-            bnb_4bit_compute_dtype=torch.float16,
+            bnb_4bit_compute_dtype=torch.bfloat16,
             bnb_4bit_use_double_quant=True,
         )
 
@@ -90,6 +90,7 @@ def check_model_loading():
             quantization_config=bnb_config,
             device_map="auto",
             trust_remote_code=True,
+            attn_implementation="sdpa",  # Use Flash SDPA
         )
 
         # Check model is on GPU
@@ -119,8 +120,7 @@ def check_lora_training(tokenizer, model):
     try:
         from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
         from datasets import Dataset
-        from transformers import TrainingArguments
-        from trl import SFTTrainer
+        from trl import SFTTrainer, SFTConfig
 
         # Prepare for training
         model = prepare_model_for_kbit_training(model)
@@ -149,25 +149,25 @@ def check_lora_training(tokenizer, model):
         output_dir = script_dir / "runs" / "quick_test"
         output_dir.mkdir(parents=True, exist_ok=True)
 
-        training_args = TrainingArguments(
+        sft_config = SFTConfig(
             output_dir=str(output_dir),
             max_steps=10,
             per_device_train_batch_size=1,
             learning_rate=1e-4,
             logging_steps=2,
             save_steps=10,
-            fp16=True,
+            bf16=True,
             optim="paged_adamw_32bit",
             report_to="none",
+            max_length=256,
+            dataset_text_field="text",
         )
 
         trainer = SFTTrainer(
             model=model,
-            args=training_args,
+            args=sft_config,
             train_dataset=dataset,
-            tokenizer=tokenizer,
-            max_seq_length=256,
-            dataset_text_field="text",
+            processing_class=tokenizer,
         )
 
         logger.info("Starting 10-step training...")

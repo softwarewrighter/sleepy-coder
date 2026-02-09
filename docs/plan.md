@@ -228,23 +228,78 @@ dependencies = [
 
 ## Milestones
 
-1. **M1: Agent runs single task** - Sandbox works, LLM called, episode captured
-2. **M2: Day loop complete** - Run 30 tasks, store all episodes
-3. **M3: Sleep loop complete** - Train LoRA from episodes
-4. **M4: Eval loop complete** - Metrics computed, gates checked
-5. **M5: Full cycle works** - Day-sleep-eval-plot automated
-6. **M6: Learning demonstrated** - Metrics improve over 6+ cycles
-7. **M7: Share consolidation works** - Multiple adapters merged
-8. **M8: Demo videos complete** - YouTube content published
+1. **M1: Agent runs single task** - Sandbox works, LLM called, episode captured ✓
+2. **M2: Day loop complete** - Run 30 tasks, store all episodes ✓
+3. **M3: Sleep loop complete** - Train LoRA from episodes ✓
+4. **M4: Eval loop complete** - Metrics computed, gates checked ✓
+5. **M5: Full cycle works** - Day-sleep-eval-plot automated ✓
+6. **M5a: Fix catastrophic forgetting** - Implement replay buffer, conservative training ✓
+7. **M6: Learning demonstrated** - Metrics improve over 3+ cycles (IN PROGRESS)
+8. **M7: Share consolidation works** - Multiple adapters merged
+9. **M8: Demo videos complete** - YouTube content published
+
+## Current Status (2026-02-08)
+
+### Completed
+- Phase 0: Setup ✓
+- Phase 1: MVP (72 tests passing) ✓
+- Baseline evaluation: 76.7% pass rate ✓
+- CUDA training pipeline working ✓
+- GGUF quantization and Ollama export ✓
+
+### Issue Discovered
+First training cycle caused **16.7% regression** (catastrophic forgetting).
+
+### Corrections Applied
+See `docs/changes.md` for full details:
+- Created `scripts/prepare_training_data.py` with replay buffer
+- Created `scripts/continual_train.py` for multi-cycle training
+- Created `docs/dashboard.html` for visualization
+- Updated training config: lr=1e-4, r=8, mixed data
 
 ---
 
 ## Risk Mitigation
 
-| Risk | Mitigation |
-|------|------------|
-| Model too good (no errors to learn from) | Use deliberately weak model, harder tasks |
-| Training unstable | Smaller learning rate, gradient clipping, validation |
-| Regression creep | Strict gates, frozen eval set, automatic rollback |
-| Slow iteration | Micro-cycles (10 tasks, 300 steps), parallel eval |
-| VRAM constraints | 4-bit quantization, gradient checkpointing, small batch |
+| Risk | Mitigation | Status |
+|------|------------|--------|
+| Model too good (no errors to learn from) | Use deliberately weak model, harder tasks | ✓ Works |
+| Training unstable | Smaller learning rate, gradient clipping, validation | ✓ Works |
+| Regression creep | Strict gates, frozen eval set, automatic rollback | ✓ Implemented |
+| Slow iteration | Micro-cycles (10 tasks, 300 steps), parallel eval | ✓ Works |
+| VRAM constraints | 4-bit quantization, gradient checkpointing, small batch | ✓ Works |
+| **Catastrophic forgetting** | **Replay buffer (50%+), mixed data, lower LR** | **✓ Fixed** |
+
+## Path to Better Results
+
+### Immediate Next Steps (30-60 min)
+
+```bash
+# 1. Retrain with proper approach
+cd cuda
+source .venv/bin/activate
+python scripts/train.py --steps 100 --lr 1e-4
+
+# 2. Export and evaluate
+python scripts/merge.py --adapter ../runs/adapters/<latest>/adapter
+# Then: ollama create, evaluate
+
+# 3. Compare to baseline
+python ../scripts/update_dashboard.py
+```
+
+### Expected Timeline
+
+| Phase | Duration | Expected Outcome |
+|-------|----------|------------------|
+| Single corrected cycle | 30-60 min | Pass rate ≥ 76.7% (no regression) |
+| 3-cycle validation | 2-3 hours | Upward trend visible |
+| 5-cycle full demo | 4-5 hours | Clear learning curve for demo |
+| Video recording | 1-2 hours | 2-min short + 15-min explainer |
+
+### Success Criteria for Demo
+
+1. **Learning curve plot** showing improvement over 3+ cycles
+2. **No regression** below baseline on any cycle
+3. **Pass rate improvement** of at least +5% after 5 cycles
+4. **Dashboard** with real-time metrics

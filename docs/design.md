@@ -58,12 +58,14 @@ Supervised fine-tuning pairs:
 
 ### 4. LoRA Configuration
 
+**Updated 2026-02-08**: Conservative settings to prevent catastrophic forgetting.
+
 ```python
 lora_config = LoraConfig(
-    r=8,                    # Low rank for small models
+    r=8,                    # Low rank = less forgetting
     lora_alpha=16,
-    target_modules=["q_proj", "v_proj"],
-    lora_dropout=0.05,
+    target_modules=["q_proj", "k_proj", "v_proj", "o_proj"],
+    lora_dropout=0.1,       # Higher dropout for regularization
     bias="none",
     task_type="CAUSAL_LM"
 )
@@ -71,13 +73,28 @@ lora_config = LoraConfig(
 training_args = TrainingArguments(
     per_device_train_batch_size=4,
     gradient_accumulation_steps=4,
-    num_train_epochs=1,
-    learning_rate=2e-4,
-    fp16=True,
+    max_steps=100,          # Shorter cycles, more frequent eval
+    learning_rate=1e-4,     # Lower LR = less forgetting
+    bf16=True,              # BF16 for modern GPUs
     logging_steps=10,
     output_dir=output_dir,
 )
 ```
+
+### 4a. Data Preparation (Critical)
+
+**Research shows replay is essential.** Prepare mixed dataset before training:
+
+```python
+# scripts/prepare_training_data.py
+dataset_composition = {
+    "replay": 0.44,          # Original training data
+    "success": 0.42,         # Tasks that passed
+    "hard_cases": 0.14,      # Failed tasks (extra copies)
+}
+```
+
+This mix prevents the model from forgetting base capabilities while learning from failures.
 
 ### 5. Share-Style Consolidation (Phase 2)
 

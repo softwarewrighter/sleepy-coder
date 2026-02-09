@@ -97,6 +97,22 @@ A minimal coding agent (Pi-like loop) with a continual learning subsystem that:
 3. **Regression suite maintains** >= 95% pass rate
 4. **Demo video** showing visual improvement over time
 
+## Lessons Learned (Updated 2026-02-08)
+
+### Catastrophic Forgetting is Real
+Initial naive SFT training caused 16.7% regression. Research shows:
+- Replay buffers are essential (50%+ of training data)
+- Lower learning rates prevent overwriting (1e-4 not 2e-4)
+- Mix data types: success + failure + replay
+
+### Required Mitigations
+1. **Replay Buffer**: Include original training data in every cycle
+2. **Data Mixing**: 44% replay + 42% success + 14% hard cases
+3. **Conservative LoRA**: r=8 instead of r=16
+4. **Gated Deployment**: Only promote if pass_rate >= baseline
+
+See `docs/changes.md` for full analysis.
+
 ## Deliverables
 
 ### Phase 1: MVP
