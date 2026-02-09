@@ -9,9 +9,13 @@ Usage:
 
 import argparse
 import logging
+import os
 import subprocess
 import sys
 from pathlib import Path
+
+# Force offline mode - no HuggingFace network requests
+os.environ["HF_HUB_OFFLINE"] = "1"
 
 import torch
 from peft import PeftModel
@@ -32,13 +36,18 @@ def merge_adapter(
     """Merge LoRA adapter into base model."""
 
     logger.info(f"Loading base model: {base_model}")
-    tokenizer = AutoTokenizer.from_pretrained(base_model, trust_remote_code=True)
+    tokenizer = AutoTokenizer.from_pretrained(
+        base_model,
+        trust_remote_code=True,
+        local_files_only=True,
+    )
 
     model = AutoModelForCausalLM.from_pretrained(
         base_model,
         torch_dtype=torch.float16,
         device_map="auto",
         trust_remote_code=True,
+        local_files_only=True,
     )
 
     logger.info(f"Loading adapter from: {adapter_path}")

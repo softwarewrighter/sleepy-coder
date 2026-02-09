@@ -18,6 +18,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
+# Force offline mode - no HuggingFace network requests
+os.environ["HF_HUB_OFFLINE"] = "1"
+
 import torch
 from datasets import Dataset
 from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
@@ -179,10 +182,18 @@ def main():
     if args.wandb:
         config.use_wandb = True
 
-    # Resolve paths relative to cuda/ dir
-    script_dir = Path(__file__).parent.parent
-    data_path = (script_dir / config.data_path).resolve()
-    output_dir = (script_dir / config.output_dir).resolve()
+    # Resolve paths - support both absolute and relative paths
+    # Relative paths are resolved from the project root (parent of cuda/)
+    script_dir = Path(__file__).parent.parent  # cuda/
+    project_root = script_dir.parent  # sleepy-coder/
+
+    data_path = Path(config.data_path)
+    if not data_path.is_absolute():
+        data_path = (project_root / config.data_path).resolve()
+
+    output_dir = Path(config.output_dir)
+    if not output_dir.is_absolute():
+        output_dir = (project_root / config.output_dir).resolve()
 
     # Create run directory
     run_id = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -203,11 +214,12 @@ def main():
         logger.info(f"CUDA device: {torch.cuda.get_device_name(0)}")
         logger.info(f"CUDA memory: {torch.cuda.get_device_properties(0).total_memory / 1024**3:.1f} GB")
 
-    # Load tokenizer
+    # Load tokenizer (offline - no HuggingFace network requests)
     logger.info(f"Loading tokenizer: {config.base_model}")
     tokenizer = AutoTokenizer.from_pretrained(
         config.base_model,
         trust_remote_code=True,
+        local_files_only=True,
     )
     tokenizer.pad_token = tokenizer.eos_token
     tokenizer.padding_side = "right"
@@ -223,13 +235,14 @@ def main():
             bnb_4bit_use_double_quant=True,
         )
 
-    # Load model
+    # Load model (offline - no HuggingFace network requests)
     logger.info(f"Loading model: {config.base_model}")
     model = AutoModelForCausalLM.from_pretrained(
         config.base_model,
         quantization_config=bnb_config,
         device_map="auto",
         trust_remote_code=True,
+        local_files_only=True,
         attn_implementation="sdpa",  # Use Flash SDPA
     )
     model.config.use_cache = False
