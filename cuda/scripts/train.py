@@ -37,23 +37,27 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class TrainConfig:
-    """Training configuration."""
+    """Training configuration.
+
+    NOTE: Conservative defaults to prevent catastrophic forgetting.
+    See docs/changes.md for rationale.
+    """
 
     # Model
     base_model: str = "Qwen/Qwen2.5-Coder-1.5B-Instruct"
 
-    # LoRA
-    lora_r: int = 16
-    lora_alpha: int = 32
-    lora_dropout: float = 0.05
+    # LoRA - Conservative settings to prevent forgetting
+    lora_r: int = 8  # Lower rank = less forgetting (was 16)
+    lora_alpha: int = 16  # Alpha = 2 * r
+    lora_dropout: float = 0.1  # Higher dropout for regularization (was 0.05)
     target_modules: list = field(default_factory=lambda: ["q_proj", "k_proj", "v_proj", "o_proj"])
 
-    # Training
-    max_steps: int = 500
+    # Training - Conservative to preserve base model knowledge
+    max_steps: int = 100  # Shorter cycles, more frequent eval (was 500)
     batch_size: int = 4  # Works well on 16GB+ GPUs
     gradient_accumulation_steps: int = 1  # Increase if OOM
-    learning_rate: float = 2e-4
-    warmup_steps: int = 50
+    learning_rate: float = 1e-4  # Lower LR = less forgetting (was 2e-4)
+    warmup_steps: int = 10  # Reduced warmup for short training
     max_seq_length: int = 2048  # Full context for code
     weight_decay: float = 0.01
     gradient_checkpointing: bool = True  # Saves memory
@@ -64,11 +68,11 @@ class TrainConfig:
     bnb_4bit_quant_type: str = "nf4"
 
     # Checkpointing
-    save_steps: int = 100
+    save_steps: int = 50
     logging_steps: int = 10
 
     # Paths (relative to cuda/ dir)
-    data_path: str = "../data/sft/train.jsonl"
+    data_path: str = "../data/sft/train.jsonl"  # Or use --data for mixed.jsonl
     output_dir: str = "../runs/adapters"
 
     # Misc
@@ -147,6 +151,9 @@ def main():
     parser.add_argument("--lr", type=float, help="Learning rate")
     parser.add_argument("--batch-size", "-b", type=int, help="Batch size")
     parser.add_argument("--output", "-o", help="Output directory")
+    parser.add_argument("--data", "-d", help="Path to training data JSONL (use mixed.jsonl for replay)")
+    parser.add_argument("--lora-r", type=int, help="LoRA rank (default: 8)")
+    parser.add_argument("--base-model", "-m", help="Base model path (local or HF). Use to continue from merged model.")
     parser.add_argument("--wandb", action="store_true", help="Enable W&B logging")
     args = parser.parse_args()
 
@@ -162,6 +169,13 @@ def main():
         config.batch_size = args.batch_size
     if args.output:
         config.output_dir = args.output
+    if args.data:
+        config.data_path = args.data
+    if args.lora_r:
+        config.lora_r = args.lora_r
+        config.lora_alpha = args.lora_r * 2  # Keep alpha = 2 * r
+    if args.base_model:
+        config.base_model = args.base_model
     if args.wandb:
         config.use_wandb = True
 
