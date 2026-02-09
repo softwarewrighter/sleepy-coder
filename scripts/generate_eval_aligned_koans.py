@@ -7,12 +7,18 @@ with our eval data (borrow_checker, trait_bounds, result_handling).
 This script generates training examples that teach the same patterns
 tested in the eval set -- covering ALL 30 eval koans, not just a subset.
 
+Additionally generates:
+- Clippy suppression anti-patterns (teach "fix, don't suppress")
+- Rust 2024 edition clippy patterns (format strings, let-chains, etc.)
+- Code complexity patterns (function decomposition, module splitting)
+
 Previous versions only covered ~10/30 patterns, which is likely why
 cycles 9-13 plateaued at 73.3% and couldn't beat the 76.7% baseline.
 
 Usage:
     python scripts/generate_eval_aligned_koans.py
     python scripts/generate_eval_aligned_koans.py --variants 20 --output data/sft/eval_aligned.jsonl
+    python scripts/generate_eval_aligned_koans.py --no-supplemental  # eval-aligned only
 """
 
 import argparse
@@ -597,6 +603,348 @@ RESULT_HANDLING_TEMPLATES = [
 ]
 
 
+# =============================================================================
+# CLIPPY SUPPRESSION ANTI-PATTERNS
+# Teach the model to fix the actual issue instead of adding #[allow(...)]
+# =============================================================================
+
+CLIPPY_SUPPRESSION_TEMPLATES = [
+    # Anti-pattern: suppressing needless_collect
+    {
+        "pattern": "no_suppress_needless_collect",
+        "error_hint": "clippy::needless_collect: remove the unnecessary .collect() instead of suppressing the lint",
+        "templates": [
+            {
+                "buggy": "#[allow(clippy::needless_collect)] fn sum_doubled(v: &[i32]) -> i32 {{ let doubled: Vec<i32> = v.iter().map(|x| x * 2).collect(); doubled.into_iter().sum() }}",
+                "fixed": "fn sum_doubled(v: &[i32]) -> i32 {{ v.iter().map(|x| x * 2).sum() }}",
+                "vars": [{}],
+            },
+            {
+                "buggy": "#[allow(clippy::needless_collect)] fn count_positive(v: &[i32]) -> usize {{ let pos: Vec<&i32> = v.iter().filter(|x| **x > 0).collect(); pos.len() }}",
+                "fixed": "fn count_positive(v: &[i32]) -> usize {{ v.iter().filter(|x| **x > 0).count() }}",
+                "vars": [{}],
+            },
+        ],
+    },
+    # Anti-pattern: suppressing uninlined_format_args
+    {
+        "pattern": "no_suppress_format_args",
+        "error_hint": "clippy::uninlined_format_args: use inline format args instead of suppressing",
+        "templates": [
+            {
+                "buggy": '#[allow(clippy::uninlined_format_args)] fn greet(name: &str) {{ println!("Hello, {{}}", name); }}',
+                "fixed": 'fn greet(name: &str) {{ println!("Hello, {{name}}"); }}',
+                "vars": [{}],
+            },
+            {
+                "buggy": '#[allow(clippy::uninlined_format_args)] fn log(level: &str, msg: &str) {{ eprintln!("[{{}}] {{}}", level, msg); }}',
+                "fixed": 'fn log(level: &str, msg: &str) {{ eprintln!("[{{level}}] {{msg}}"); }}',
+                "vars": [{}],
+            },
+        ],
+    },
+    # Anti-pattern: suppressing manual_map
+    {
+        "pattern": "no_suppress_manual_map",
+        "error_hint": "clippy::manual_map: use .map() instead of suppressing the lint",
+        "templates": [
+            {
+                "buggy": "#[allow(clippy::manual_map)] fn inc(opt: Option<i32>) -> Option<i32> {{ match opt {{ Some(x) => Some(x + 1), None => None }} }}",
+                "fixed": "fn inc(opt: Option<i32>) -> Option<i32> {{ opt.map(|x| x + 1) }}",
+                "vars": [{}],
+            },
+            {
+                "buggy": '#[allow(clippy::manual_map)] fn to_upper(opt: Option<String>) -> Option<String> {{ match opt {{ Some(s) => Some(s.to_uppercase()), None => None }} }}',
+                "fixed": "fn to_upper(opt: Option<String>) -> Option<String> {{ opt.map(|s| s.to_uppercase()) }}",
+                "vars": [{}],
+            },
+        ],
+    },
+    # Anti-pattern: suppressing match_like_matches_macro
+    {
+        "pattern": "no_suppress_matches",
+        "error_hint": "clippy::match_like_matches_macro: use matches!() instead of suppressing",
+        "templates": [
+            {
+                "buggy": "#[allow(clippy::match_like_matches_macro)] fn is_vowel(c: char) -> bool {{ match c {{ 'a' | 'e' | 'i' | 'o' | 'u' => true, _ => false }} }}",
+                "fixed": "fn is_vowel(c: char) -> bool {{ matches!(c, 'a' | 'e' | 'i' | 'o' | 'u') }}",
+                "vars": [{}],
+            },
+        ],
+    },
+    # Anti-pattern: suppressing clone_on_ref_ptr
+    {
+        "pattern": "no_suppress_clone_ref",
+        "error_hint": "clippy::clone_on_ref_ptr: use Arc::clone() for clarity instead of suppressing",
+        "templates": [
+            {
+                "buggy": "#[allow(clippy::clone_on_ref_ptr)] fn share(a: &std::sync::Arc<String>) -> std::sync::Arc<String> {{ a.clone() }}",
+                "fixed": "fn share(a: &std::sync::Arc<String>) -> std::sync::Arc<String> {{ std::sync::Arc::clone(a) }}",
+                "vars": [{}],
+            },
+        ],
+    },
+    # Anti-pattern: suppressing clippy::all or blanket suppression
+    {
+        "pattern": "no_blanket_suppress",
+        "error_hint": "never use blanket #[allow(clippy::all)]: fix the specific issues instead",
+        "templates": [
+            {
+                "buggy": "#![allow(clippy::all)] fn add(a: i32, b: i32) -> i32 {{ let result: i32 = a + b; return result; }}",
+                "fixed": "fn add(a: i32, b: i32) -> i32 {{ a + b }}",
+                "vars": [{}],
+            },
+        ],
+    },
+    # Anti-pattern: suppressing unused_must_use
+    {
+        "pattern": "no_suppress_must_use",
+        "error_hint": "don't suppress unused Result: handle the error properly",
+        "templates": [
+            {
+                "buggy": '#[allow(unused_must_use)] fn write_file(path: &str) {{ std::fs::write(path, "data"); }}',
+                "fixed": 'fn write_file(path: &str) {{ let _ = std::fs::write(path, "data"); }}',
+                "vars": [{}],
+            },
+            {
+                "buggy": '#[allow(unused_must_use)] fn remove(path: &str) {{ std::fs::remove_file(path); }}',
+                "fixed": 'fn remove(path: &str) -> std::io::Result<()> {{ std::fs::remove_file(path) }}',
+                "vars": [{}],
+            },
+        ],
+    },
+    # Anti-pattern: suppressing dead_code instead of removing it
+    {
+        "pattern": "no_suppress_dead_code",
+        "error_hint": "don't suppress dead_code: remove unused functions instead",
+        "templates": [
+            {
+                "buggy": "#[allow(dead_code)] fn unused_helper() -> i32 {{ 42 }} fn main() {{ println!(\"hello\"); }}",
+                "fixed": "fn main() {{ println!(\"hello\"); }}",
+                "vars": [{}],
+            },
+        ],
+    },
+]
+
+# =============================================================================
+# RUST 2024 EDITION / MODERN CLIPPY PATTERNS
+# Patterns that LLMs trained on pre-2024 Rust get wrong
+# =============================================================================
+
+RUST_2024_TEMPLATES = [
+    # Format string capture (clippy::uninlined_format_args)
+    {
+        "pattern": "inline_format_args",
+        "error_hint": "clippy::uninlined_format_args: use inline format variables",
+        "templates": [
+            {
+                "buggy": 'fn greet({v}: &str) {{ println!("Hello, {{}}", {v}); }}',
+                "fixed": 'fn greet({v}: &str) {{ println!("Hello, {{{v}}}"); }}',
+                "vars": [{"v": "name"}, {"v": "user"}, {"v": "who"}],
+            },
+            {
+                "buggy": 'fn log({v}: &str, {v2}: u32) {{ eprintln!("[{{}}] {{}}", {v2}, {v}); }}',
+                "fixed": 'fn log({v}: &str, {v2}: u32) {{ eprintln!("[{{{v2}}}] {{{v}}}"); }}',
+                "vars": [{"v": "msg", "v2": "code"}, {"v": "text", "v2": "level"}],
+            },
+            {
+                "buggy": 'fn format_point({v}: f64, {v2}: f64) -> String {{ format!("({{}}, {{}})", {v}, {v2}) }}',
+                "fixed": 'fn format_point({v}: f64, {v2}: f64) -> String {{ format!("({{{v}}}, {{{v2}}})") }}',
+                "vars": [{"v": "x", "v2": "y"}, {"v": "lat", "v2": "lon"}],
+            },
+        ],
+    },
+    # iter().cloned() vs copied() for Copy types
+    {
+        "pattern": "iter_copied",
+        "error_hint": "clippy::cloned_instead_of_copied: use .copied() for Copy types",
+        "templates": [
+            {
+                "buggy": "fn double_all(v: &[i32]) -> Vec<i32> {{ v.iter().cloned().map(|x| x * 2).collect() }}",
+                "fixed": "fn double_all(v: &[i32]) -> Vec<i32> {{ v.iter().copied().map(|x| x * 2).collect() }}",
+                "vars": [{}],
+            },
+            {
+                "buggy": "fn sum_all(v: &[i64]) -> i64 {{ v.iter().cloned().sum() }}",
+                "fixed": "fn sum_all(v: &[i64]) -> i64 {{ v.iter().copied().sum() }}",
+                "vars": [{}],
+            },
+        ],
+    },
+    # matches! macro
+    {
+        "pattern": "use_matches_macro",
+        "error_hint": "clippy::match_like_matches_macro: use matches!() macro",
+        "templates": [
+            {
+                "buggy": "fn is_digit(c: char) -> bool {{ match c {{ '0'..='9' => true, _ => false }} }}",
+                "fixed": "fn is_digit(c: char) -> bool {{ matches!(c, '0'..='9') }}",
+                "vars": [{}],
+            },
+            {
+                "buggy": "fn is_ok(r: &Result<i32, &str>) -> bool {{ match r {{ Ok(_) => true, _ => false }} }}",
+                "fixed": "fn is_ok(r: &Result<i32, &str>) -> bool {{ matches!(r, Ok(_)) }}",
+                "vars": [{}],
+            },
+        ],
+    },
+    # manual_flatten
+    {
+        "pattern": "use_flatten",
+        "error_hint": "clippy::manual_flatten: use .flatten() instead of filter+unwrap",
+        "templates": [
+            {
+                "buggy": "fn get_somes(v: Vec<Option<i32>>) -> Vec<i32> {{ v.into_iter().filter(|x| x.is_some()).map(|x| x.unwrap()).collect() }}",
+                "fixed": "fn get_somes(v: Vec<Option<i32>>) -> Vec<i32> {{ v.into_iter().flatten().collect() }}",
+                "vars": [{}],
+            },
+        ],
+    },
+    # needless_collect
+    {
+        "pattern": "remove_needless_collect",
+        "error_hint": "clippy::needless_collect: remove unnecessary intermediate collect()",
+        "templates": [
+            {
+                "buggy": "fn sum_squares(v: &[i32]) -> i32 {{ v.iter().map(|x| x * x).collect::<Vec<_>>().into_iter().sum() }}",
+                "fixed": "fn sum_squares(v: &[i32]) -> i32 {{ v.iter().map(|x| x * x).sum() }}",
+                "vars": [{}],
+            },
+        ],
+    },
+    # Let-chains (stabilized in Rust 1.76, edition 2024)
+    {
+        "pattern": "let_chains",
+        "error_hint": "use let-chains to combine if-let with conditions",
+        "templates": [
+            {
+                "buggy": "fn check(opt: Option<i32>) -> bool {{ if let Some(x) = opt {{ if x > 0 {{ return true; }} }} false }}",
+                "fixed": "fn check(opt: Option<i32>) -> bool {{ if let Some(x) = opt && x > 0 {{ return true; }} false }}",
+                "vars": [{}],
+            },
+            {
+                "buggy": "fn get_valid(opt: Option<String>) -> Option<String> {{ if let Some(s) = opt {{ if !s.is_empty() {{ return Some(s); }} }} None }}",
+                "fixed": "fn get_valid(opt: Option<String>) -> Option<String> {{ if let Some(s) = opt && !s.is_empty() {{ return Some(s); }} None }}",
+                "vars": [{}],
+            },
+        ],
+    },
+    # Let-else
+    {
+        "pattern": "let_else",
+        "error_hint": "use let-else pattern for early returns on None/Err",
+        "templates": [
+            {
+                "buggy": "fn unwrap_or_ret(opt: Option<i32>) -> i32 {{ match opt {{ Some(x) => x, None => return 0 }} }}",
+                "fixed": "fn unwrap_or_ret(opt: Option<i32>) -> i32 {{ let Some(x) = opt else {{ return 0; }}; x }}",
+                "vars": [{}],
+            },
+            {
+                "buggy": "fn parse_or_default(s: &str) -> i32 {{ match s.parse() {{ Ok(n) => n, Err(_) => return -1 }} }}",
+                "fixed": "fn parse_or_default(s: &str) -> i32 {{ let Ok(n) = s.parse() else {{ return -1; }}; n }}",
+                "vars": [{}],
+            },
+        ],
+    },
+    # Modern Option/Result methods
+    {
+        "pattern": "is_some_and",
+        "error_hint": "use is_some_and/is_ok_and instead of map+unwrap_or",
+        "templates": [
+            {
+                "buggy": "fn has_positive(opt: Option<i32>) -> bool {{ opt.map(|x| x > 0).unwrap_or(false) }}",
+                "fixed": "fn has_positive(opt: Option<i32>) -> bool {{ opt.is_some_and(|x| x > 0) }}",
+                "vars": [{}],
+            },
+            {
+                "buggy": 'fn is_valid(res: Result<i32, &str>) -> bool {{ res.map(|x| x >= 0).unwrap_or(false) }}',
+                "fixed": "fn is_valid(res: Result<i32, &str>) -> bool {{ res.is_ok_and(|x| x >= 0) }}",
+                "vars": [{}],
+            },
+        ],
+    },
+    # &Vec<T> -> &[T] in function params
+    {
+        "pattern": "slice_param",
+        "error_hint": "clippy::ptr_arg: use &[T] instead of &Vec<T> in function parameters",
+        "templates": [
+            {
+                "buggy": "fn sum(v: &Vec<i32>) -> i32 {{ v.iter().sum() }}",
+                "fixed": "fn sum(v: &[i32]) -> i32 {{ v.iter().sum() }}",
+                "vars": [{}],
+            },
+            {
+                "buggy": 'fn join(v: &Vec<String>) -> String {{ v.join(", ") }}',
+                "fixed": 'fn join(v: &[String]) -> String {{ v.join(", ") }}',
+                "vars": [{}],
+            },
+        ],
+    },
+]
+
+# =============================================================================
+# CODE COMPLEXITY PATTERNS
+# Teach decomposition and module structure (sw-checker compliance)
+# =============================================================================
+
+COMPLEXITY_TEMPLATES = [
+    # Too many lines per function -> decompose
+    {
+        "pattern": "decompose_long_function",
+        "error_hint": "function too long: decompose into smaller focused functions",
+        "templates": [
+            {
+                "buggy": "fn process(data: &str) -> Result<String, Error> {{ let trimmed = data.trim(); if trimmed.is_empty() {{ return Err(Error::Empty); }} let parsed: i32 = trimmed.parse().map_err(|_| Error::Parse)?; let validated = if parsed < 0 {{ return Err(Error::Negative); }} else {{ parsed }}; let result = validated * 2 + 10; Ok(format!(\"result: {{}}\", result)) }}",
+                "fixed": "fn parse_input(data: &str) -> Result<i32, Error> {{ let trimmed = data.trim(); if trimmed.is_empty() {{ return Err(Error::Empty); }} trimmed.parse().map_err(|_| Error::Parse) }} fn validate(n: i32) -> Result<i32, Error> {{ if n < 0 {{ Err(Error::Negative) }} else {{ Ok(n) }} }} fn process(data: &str) -> Result<String, Error> {{ let parsed = parse_input(data)?; let validated = validate(parsed)?; Ok(format!(\"result: {{}}\", validated * 2 + 10)) }}",
+                "vars": [{}],
+            },
+            {
+                "buggy": "fn handle_request(req: Request) -> Response {{ let auth = req.headers.get(\"Authorization\"); if auth.is_none() {{ return Response::unauthorized(); }} let token = auth.unwrap(); if !verify_token(token) {{ return Response::forbidden(); }} let body = req.body(); let data: Data = serde_json::from_str(body).unwrap(); let result = db::save(&data); match result {{ Ok(_) => Response::ok(), Err(e) => Response::error(e) }} }}",
+                "fixed": "fn authenticate(req: &Request) -> Result<&str, Response> {{ req.headers.get(\"Authorization\").filter(|t| verify_token(t)).ok_or_else(Response::unauthorized) }} fn parse_body(req: &Request) -> Result<Data, Response> {{ serde_json::from_str(req.body()).map_err(|_| Response::bad_request()) }} fn handle_request(req: Request) -> Response {{ let _token = match authenticate(&req) {{ Ok(t) => t, Err(r) => return r }}; match parse_body(&req).and_then(|data| db::save(&data).map_err(|e| Response::error(e))) {{ Ok(_) => Response::ok(), Err(r) => r }} }}",
+                "vars": [{}],
+            },
+        ],
+    },
+    # Too many functions per module -> split into submodules
+    {
+        "pattern": "split_large_module",
+        "error_hint": "too many functions in module: split into focused submodules",
+        "templates": [
+            {
+                "buggy": "// lib.rs with too many functions\npub fn create_user() {{}} pub fn get_user() {{}} pub fn update_user() {{}} pub fn delete_user() {{}} pub fn list_users() {{}} pub fn create_post() {{}} pub fn get_post() {{}} pub fn update_post() {{}} pub fn delete_post() {{}} pub fn list_posts() {{}} pub fn create_comment() {{}} pub fn get_comment() {{}}",
+                "fixed": "// lib.rs\npub mod users;\npub mod posts;\npub mod comments;\n\n// users.rs\npub fn create() {{}} pub fn get() {{}} pub fn update() {{}} pub fn delete() {{}} pub fn list() {{}}\n\n// posts.rs\npub fn create() {{}} pub fn get() {{}} pub fn update() {{}} pub fn delete() {{}} pub fn list() {{}}\n\n// comments.rs\npub fn create() {{}} pub fn get() {{}}",
+                "vars": [{}],
+            },
+        ],
+    },
+    # Monolithic main.rs -> separate modules into files
+    {
+        "pattern": "extract_modules_to_files",
+        "error_hint": "file too long: extract inline modules into separate files",
+        "templates": [
+            {
+                "buggy": "// main.rs - everything inline\nmod config {{ pub struct Config {{ pub db_url: String }} impl Config {{ pub fn load() -> Self {{ todo!() }} }} }}\nmod db {{ pub fn connect(_url: &str) {{}} pub fn query() {{}} }}\nmod handlers {{ pub fn index() {{}} pub fn health() {{}} }}\nfn main() {{}}",
+                "fixed": "// main.rs\nmod config;\nmod db;\nmod handlers;\n\nfn main() {{}}\n\n// config.rs\npub struct Config {{ pub db_url: String }}\nimpl Config {{ pub fn load() -> Self {{ todo!() }} }}\n\n// db.rs\npub fn connect(_url: &str) {{}}\npub fn query() {{}}\n\n// handlers.rs\npub fn index() {{}}\npub fn health() {{}}",
+                "vars": [{}],
+            },
+        ],
+    },
+    # God struct -> decompose into smaller types
+    {
+        "pattern": "decompose_god_struct",
+        "error_hint": "struct has too many fields: decompose into smaller focused types",
+        "templates": [
+            {
+                "buggy": "struct App {{ db_host: String, db_port: u16, db_name: String, cache_host: String, cache_port: u16, log_level: String, log_file: String, server_host: String, server_port: u16 }}",
+                "fixed": "struct DbConfig {{ host: String, port: u16, name: String }}\nstruct CacheConfig {{ host: String, port: u16 }}\nstruct LogConfig {{ level: String, file: String }}\nstruct ServerConfig {{ host: String, port: u16 }}\nstruct App {{ db: DbConfig, cache: CacheConfig, log: LogConfig, server: ServerConfig }}",
+                "vars": [{}],
+            },
+        ],
+    },
+]
+
+
 def generate_variants(templates: list, family: str, n_per_template: int = 5) -> list[Koan]:
     """Generate koan variants from templates."""
     koans = []
@@ -652,41 +1000,75 @@ def main():
     parser.add_argument("--variants", "-n", type=int, default=10, help="Variants per template")
     parser.add_argument("--output", "-o", default="data/sft/eval_aligned.jsonl", help="Output file")
     parser.add_argument("--seed", type=int, default=42, help="Random seed")
+    parser.add_argument("--no-supplemental", action="store_true",
+                        help="Only generate eval-aligned data (skip clippy/complexity/rust2024)")
     args = parser.parse_args()
 
     random.seed(args.seed)
 
     print("=== Generating Eval-Aligned Training Data ===")
     print(f"Variants per template: {args.variants}")
+    print(f"Supplemental data: {'disabled' if args.no_supplemental else 'enabled'}")
     print()
 
     all_koans = []
 
-    # Generate borrow checker koans (10 patterns)
+    # --- Core eval-aligned patterns (30 frozen eval koans) ---
     bc_koans = generate_variants(BORROW_CHECKER_TEMPLATES, "borrow_checker", args.variants)
     print(f"Borrow checker: {len(bc_koans)} koans ({len(BORROW_CHECKER_TEMPLATES)} patterns)")
     all_koans.extend(bc_koans)
 
-    # Generate trait bounds koans (10 patterns)
     tb_koans = generate_variants(TRAIT_BOUNDS_TEMPLATES, "trait_bounds", args.variants)
     print(f"Trait bounds:    {len(tb_koans)} koans ({len(TRAIT_BOUNDS_TEMPLATES)} patterns)")
     all_koans.extend(tb_koans)
 
-    # Generate result handling koans (10 patterns)
     rh_koans = generate_variants(RESULT_HANDLING_TEMPLATES, "result_handling", args.variants)
     print(f"Result handling: {len(rh_koans)} koans ({len(RESULT_HANDLING_TEMPLATES)} patterns)")
     all_koans.extend(rh_koans)
 
-    print()
-    print(f"Total: {len(all_koans)} training examples covering all 30 eval patterns")
-
-    # Print pattern coverage summary
     bc_patterns = {k.pattern for k in bc_koans}
     tb_patterns = {k.pattern for k in tb_koans}
     rh_patterns = {k.pattern for k in rh_koans}
-    print(f"  BC patterns: {len(bc_patterns)}/10")
-    print(f"  TB patterns: {len(tb_patterns)}/10")
-    print(f"  RH patterns: {len(rh_patterns)}/10")
+    print(f"\nEval coverage: BC={len(bc_patterns)}/10  TB={len(tb_patterns)}/10  RH={len(rh_patterns)}/10")
+
+    # --- Supplemental patterns (clippy, rust 2024, complexity) ---
+    if not args.no_supplemental:
+        print()
+
+        cs_koans = generate_variants(CLIPPY_SUPPRESSION_TEMPLATES, "clippy_suppression", args.variants)
+        print(f"Clippy anti-suppress: {len(cs_koans)} koans ({len(CLIPPY_SUPPRESSION_TEMPLATES)} patterns)")
+        all_koans.extend(cs_koans)
+
+        r24_koans = generate_variants(RUST_2024_TEMPLATES, "rust_2024", args.variants)
+        print(f"Rust 2024 edition:    {len(r24_koans)} koans ({len(RUST_2024_TEMPLATES)} patterns)")
+        all_koans.extend(r24_koans)
+
+        cx_koans = generate_variants(COMPLEXITY_TEMPLATES, "complexity", args.variants)
+        print(f"Code complexity:      {len(cx_koans)} koans ({len(COMPLEXITY_TEMPLATES)} patterns)")
+        all_koans.extend(cx_koans)
+
+    # --- Also merge in any manual corrections ---
+    corrections_path = Path("data/sft/corrections.jsonl")
+    corrections_count = 0
+    if corrections_path.exists():
+        with open(corrections_path) as f:
+            for line in f:
+                if line.strip():
+                    entry = json.loads(line)
+                    # Convert correction entry to Koan for unified handling
+                    koan = Koan(
+                        task_id=entry.get("task_id", f"correction_{corrections_count:03d}"),
+                        family=entry.get("family", "correction"),
+                        pattern=entry.get("pattern", "manual_correction"),
+                        buggy_code=entry.get("buggy", entry.get("input", "")),
+                        fixed_code=entry.get("fixed", entry.get("output", "")),
+                        error_hint=entry.get("error_hint", "Fix the issue"),
+                    )
+                    all_koans.append(koan)
+                    corrections_count += 1
+        print(f"Manual corrections:   {corrections_count} (from {corrections_path})")
+
+    print(f"\nTotal: {len(all_koans)} training examples")
 
     # Shuffle
     random.shuffle(all_koans)
@@ -699,12 +1081,16 @@ def main():
         for koan in all_koans:
             f.write(json.dumps(koan_to_jsonl(koan)) + "\n")
 
-    print(f"\nWritten to: {output_path}")
+    print(f"Written to: {output_path}")
     print()
     print("Next steps:")
     print(f"  1. Train: python cuda/scripts/train.py --data {output_path} --steps 100")
     print("  2. Merge: python cuda/scripts/merge.py --adapter runs/adapters/<timestamp>/adapter --model-name sleepy-coder-v14")
     print("  3. Eval:  ./rust/target/release/sleepy-coder eval --cycle 14 --model sleepy-coder-v14")
+    print()
+    print("To add manual corrections, append JSONL entries to data/sft/corrections.jsonl:")
+    print('  {"task_id":"fix_001","family":"clippy","pattern":"specific_issue",')
+    print('   "buggy":"<code with issue>","fixed":"<corrected code>","error_hint":"<description>"}')
 
 
 if __name__ == "__main__":

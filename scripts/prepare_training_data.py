@@ -187,11 +187,54 @@ def prepare_mixed_dataset(
     return mixed
 
 
+def load_corrections(corrections_path: Path) -> list[dict]:
+    """
+    Load manual corrections from JSONL.
+
+    Corrections are external feedback entries (from sw-checker, clippy, code review)
+    that should be incorporated into the next sleep cycle's training data.
+
+    Format:
+        {"task_id": "fix_001", "family": "clippy", "pattern": "specific_issue",
+         "buggy": "<code>", "fixed": "<code>", "error_hint": "<description>",
+         "source": "sw-checker"}
+
+    Or standard instruction/input/output SFT format:
+        {"instruction": "...", "input": "...", "output": "...", "source": "correction"}
+    """
+    corrections = []
+    if not corrections_path.exists():
+        return corrections
+
+    for entry in load_jsonl(corrections_path):
+        # Normalize to SFT format if using buggy/fixed shorthand
+        if "buggy" in entry and "fixed" in entry:
+            error_hint = entry.get("error_hint", "Fix the issue")
+            corrections.append({
+                "instruction": "You are a Rust expert. Fix the following code that has a compilation error or clippy warning.\nReturn ONLY the fixed Rust code without any explanation or markdown formatting.",
+                "input": f"## Buggy Code:\n```rust\n{entry['buggy']}\n```\n\n## Compiler Error:\n{error_hint}\n\n## Fixed Code:",
+                "output": entry["fixed"],
+                "task_id": entry.get("task_id", f"correction_{len(corrections):03d}"),
+                "source": entry.get("source", "correction"),
+                "family": entry.get("family", "correction"),
+            })
+        else:
+            # Already in SFT format
+            entry.setdefault("source", "correction")
+            corrections.append(entry)
+
+    return corrections
+
+
 def main():
     parser = argparse.ArgumentParser(description="Prepare training data with replay")
     parser.add_argument("--replay-ratio", type=float, default=0.5, help="Replay data ratio")
     parser.add_argument("--synthetic-ratio", type=float, default=0.2, help="Synthetic data ratio")
     parser.add_argument("--output", "-o", default="data/sft/mixed.jsonl", help="Output file")
+    parser.add_argument("--corrections", "-c", default="data/sft/corrections.jsonl",
+                        help="Path to manual corrections JSONL (from sw-checker, clippy, review)")
+    parser.add_argument("--supplemental", "-s", nargs="*", default=[],
+                        help="Additional JSONL files to include (e.g. rust2024_koans.jsonl)")
     parser.add_argument("--seed", type=int, default=42, help="Random seed")
     args = parser.parse_args()
 
@@ -223,12 +266,43 @@ def main():
     koans = load_koans(koans_dir) if koans_dir.exists() else {}
     print(f"Loaded {len(koans)} koans")
 
+    # Load manual corrections (from sw-checker, clippy, code review feedback)
+    corrections_path = project_root / args.corrections
+    corrections = load_corrections(corrections_path)
+    if corrections:
+        print(f"Loaded {len(corrections)} manual corrections from: {corrections_path}")
+
+    # Load supplemental JSONL files
+    supplemental = []
+    for supp_path in args.supplemental:
+        full_path = project_root / supp_path
+        supp_data = load_jsonl(full_path)
+        if supp_data:
+            for entry in supp_data:
+                entry.setdefault("source", f"supplemental:{Path(supp_path).stem}")
+            supplemental.extend(supp_data)
+            print(f"Loaded {len(supp_data)} supplemental examples from: {full_path}")
+
     # Prepare mixed dataset
     mixed = prepare_mixed_dataset(
         sft_examples,
         episodes,
         replay_ratio=args.replay_ratio,
     )
+
+    # Add corrections with extra weight (3x copies - these are high-signal fixes)
+    if corrections:
+        correction_copies = corrections * 3
+        mixed.extend(correction_copies)
+        print(f"Added {len(correction_copies)} correction examples (3x weighted)")
+
+    # Add supplemental data
+    if supplemental:
+        mixed.extend(supplemental)
+        print(f"Added {len(supplemental)} supplemental examples")
+
+    # Re-shuffle after adding corrections and supplemental
+    random.shuffle(mixed)
 
     # Save
     output_path = project_root / args.output
@@ -250,6 +324,12 @@ def main():
     for src, count in sorted(sources.items()):
         pct = count / len(mixed) * 100
         print(f"  {src}: {count} ({pct:.1f}%)")
+
+    if not corrections and corrections_path.exists():
+        print(f"\nNote: {corrections_path} exists but was empty")
+    elif not corrections_path.exists():
+        print(f"\nTip: Create {corrections_path} with feedback from sw-checker/clippy/review:")
+        print('  {{"task_id":"fix_001","family":"clippy","buggy":"<code>","fixed":"<code>","error_hint":"..."}}')
 
 
 if __name__ == "__main__":

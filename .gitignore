@@ -43,6 +43,7 @@ Thumbs.db
 /runs/*/
 /data/episodes/*.sqlite
 /data/sft/*.jsonl
+!/data/sft/corrections.jsonl
 /data/episodes/*.jsonl
 /data/export/
 
