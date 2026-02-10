@@ -1,0 +1,27 @@
+flowchart BT
+    core_types["core_types\nEpisode, Task, EvalResult"]
+
+    sandbox["sandbox\nCargo check/test"]
+    capture["capture\nSQLite storage"]
+    koans["tasks_rust_koans\n42 built-in tasks"]
+    agent["agent\nOllama client + loop"]
+    eval["eval\nMetrics + gating"]
+    cli["cli\nUser interface"]
+
+    core_types --> sandbox
+    core_types --> capture
+    core_types --> koans
+    core_types --> agent
+    core_types --> eval
+
+    sandbox --> agent
+    capture --> agent
+    koans --> agent
+    koans --> eval
+    agent --> eval
+    capture --> eval
+
+    agent --> cli
+    eval --> cli
+    koans --> cli
+    capture --> cli

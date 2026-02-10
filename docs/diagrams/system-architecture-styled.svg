@@ -1,0 +1,303 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 700" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif">
+  <defs>
+    <!-- Gradients -->
+    <linearGradient id="rustGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#F5A97F"/>
+      <stop offset="100%" style="stop-color:#ED8A5A"/>
+    </linearGradient>
+    <linearGradient id="pythonGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#7EB8DA"/>
+      <stop offset="100%" style="stop-color:#5BA3CF"/>
+    </linearGradient>
+    <linearGradient id="dayGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFE066"/>
+      <stop offset="100%" style="stop-color:#FFD43B"/>
+    </linearGradient>
+    <linearGradient id="nightGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#748FFC"/>
+      <stop offset="100%" style="stop-color:#5C7CFA"/>
+    </linearGradient>
+    <linearGradient id="evalGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#69DB7C"/>
+      <stop offset="100%" style="stop-color:#51CF66"/>
+    </linearGradient>
+    <linearGradient id="dataGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#868E96"/>
+      <stop offset="100%" style="stop-color:#495057"/>
+    </linearGradient>
+
+    <!-- Shadows -->
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#000" flood-opacity="0.1"/>
+    </filter>
+    <filter id="softShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="1" stdDeviation="2" flood-color="#000" flood-opacity="0.08"/>
+    </filter>
+
+    <!-- Arrow markers -->
+    <marker id="arrowGray" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#868E96"/>
+    </marker>
+    <marker id="arrowBlue" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#5C7CFA"/>
+    </marker>
+    <marker id="arrowGreen" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#51CF66"/>
+    </marker>
+    <marker id="arrowOrange" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#ED8A5A"/>
+    </marker>
+  </defs>
+
+  <!-- Background - warm cream/gray -->
+  <rect width="1000" height="700" fill="#F8F6F1"/>
+
+  <!-- Subtle texture -->
+  <defs>
+    <pattern id="subtleGrid" patternUnits="userSpaceOnUse" width="20" height="20">
+      <circle cx="10" cy="10" r="0.5" fill="#E0DDD5" opacity="0.5"/>
+    </pattern>
+  </defs>
+  <rect width="1000" height="700" fill="url(#subtleGrid)" opacity="0.3"/>
+
+  <!-- Title -->
+  <text x="500" y="40" text-anchor="middle" font-size="22" font-weight="600" fill="#212529">Sleepy-Coder: Continual Learning for Rust Code Repair</text>
+  <text x="500" y="62" text-anchor="middle" font-size="13" fill="#868E96">Self-improving agent with day/night learning cycle</text>
+
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- CENTRAL CYCLE VISUALIZATION -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+
+  <!-- Cycle background ring -->
+  <circle cx="500" cy="350" r="155" fill="none" stroke="#E9ECEF" stroke-width="30" opacity="0.5"/>
+
+  <!-- DAY Phase (Top) -->
+  <g filter="url(#shadow)">
+    <path d="M420,200 Q500,180 580,200 L580,260 Q500,240 420,260 Z" fill="url(#dayGrad)" rx="12"/>
+  </g>
+  <text x="500" y="223" text-anchor="middle" font-size="11" font-weight="600" fill="#664D03" letter-spacing="1">DAY</text>
+  <text x="500" y="240" text-anchor="middle" font-size="10" fill="#997404">Agent Attempts Fixes</text>
+  <!-- Sun icon -->
+  <circle cx="500" cy="195" r="8" fill="#FCC419" stroke="#F59F00" stroke-width="1.5"/>
+  <g stroke="#F59F00" stroke-width="1.5" stroke-linecap="round">
+    <line x1="500" y1="182" x2="500" y2="178"/>
+    <line x1="500" y1="212" x2="500" y2="208"/>
+    <line x1="487" y1="195" x2="483" y2="195"/>
+    <line x1="517" y1="195" x2="513" y2="195"/>
+  </g>
+
+  <!-- NIGHT Phase (Bottom-Left) -->
+  <g filter="url(#shadow)">
+    <path d="M300,420 Q340,380 300,340 L360,340 Q320,380 360,420 Z" fill="url(#nightGrad)" rx="12" transform="rotate(-30, 330, 380)"/>
+    <rect x="280" y="400" width="120" height="55" rx="10" fill="url(#nightGrad)"/>
+  </g>
+  <text x="340" y="422" text-anchor="middle" font-size="11" font-weight="600" fill="#1C3F94" letter-spacing="1">NIGHT</text>
+  <text x="340" y="439" text-anchor="middle" font-size="10" fill="#364FC7">LoRA Fine-tuning</text>
+  <!-- Moon icon -->
+  <path d="M332,395 a8,8 0 1,1 0,0.1 a6,6 0 1,0 0,-0.1" fill="#B197FC" transform="translate(-2, -2)"/>
+
+  <!-- EVAL Phase (Bottom-Right) -->
+  <g filter="url(#shadow)">
+    <rect x="580" y="400" width="120" height="55" rx="10" fill="url(#evalGrad)"/>
+  </g>
+  <text x="640" y="422" text-anchor="middle" font-size="11" font-weight="600" fill="#0B5727" letter-spacing="1">EVAL</text>
+  <text x="640" y="439" text-anchor="middle" font-size="10" fill="#2B8A3E">Gated Promotion</text>
+  <!-- Checkmark icon -->
+  <circle cx="640" cy="395" r="8" fill="#40C057" stroke="#2F9E44" stroke-width="1.5"/>
+  <polyline points="635,395 638,398 645,391" stroke="white" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Cycle Arrows -->
+  <!-- Day → Night -->
+  <path d="M430,265 Q350,300 320,380" fill="none" stroke="#868E96" stroke-width="2.5" stroke-linecap="round" marker-end="url(#arrowGray)"/>
+  <!-- Night → Eval -->
+  <path d="M400,435 Q480,480 570,430" fill="none" stroke="#868E96" stroke-width="2.5" stroke-linecap="round" marker-end="url(#arrowGray)"/>
+  <!-- Eval → Day -->
+  <path d="M680,380 Q700,300 580,260" fill="none" stroke="#868E96" stroke-width="2.5" stroke-linecap="round" marker-end="url(#arrowGray)"/>
+
+  <!-- Center Label -->
+  <circle cx="500" cy="350" r="45" fill="white" filter="url(#softShadow)"/>
+  <text x="500" y="345" text-anchor="middle" font-size="12" font-weight="600" fill="#343A40">Continual</text>
+  <text x="500" y="360" text-anchor="middle" font-size="12" font-weight="600" fill="#343A40">Learning</text>
+
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- LEFT SIDE: RUST COMPONENTS -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+
+  <!-- Rust Section Header -->
+  <rect x="40" y="95" width="180" height="28" rx="4" fill="url(#rustGrad)" filter="url(#softShadow)"/>
+  <text x="130" y="114" text-anchor="middle" font-size="12" font-weight="600" fill="white">Rust Runtime</text>
+
+  <!-- Rust Components -->
+  <g filter="url(#softShadow)">
+    <!-- CLI -->
+    <rect x="40" y="135" width="80" height="45" rx="6" fill="white" stroke="#ED8A5A" stroke-width="1.5"/>
+    <text x="80" y="155" text-anchor="middle" font-size="11" font-weight="500" fill="#343A40">CLI</text>
+    <text x="80" y="170" text-anchor="middle" font-size="9" fill="#868E96">Interface</text>
+
+    <!-- Agent -->
+    <rect x="130" y="135" width="90" height="45" rx="6" fill="white" stroke="#ED8A5A" stroke-width="1.5"/>
+    <text x="175" y="155" text-anchor="middle" font-size="11" font-weight="500" fill="#343A40">Agent Loop</text>
+    <text x="175" y="170" text-anchor="middle" font-size="9" fill="#868E96">RED→FIX→GREEN</text>
+
+    <!-- Sandbox -->
+    <rect x="40" y="190" width="85" height="45" rx="6" fill="white" stroke="#ED8A5A" stroke-width="1.5"/>
+    <text x="82" y="210" text-anchor="middle" font-size="11" font-weight="500" fill="#343A40">Sandbox</text>
+    <text x="82" y="225" text-anchor="middle" font-size="9" fill="#868E96">cargo check</text>
+
+    <!-- Capture -->
+    <rect x="135" y="190" width="85" height="45" rx="6" fill="white" stroke="#ED8A5A" stroke-width="1.5"/>
+    <text x="177" y="210" text-anchor="middle" font-size="11" font-weight="500" fill="#343A40">Capture</text>
+    <text x="177" y="225" text-anchor="middle" font-size="9" fill="#868E96">Episodes</text>
+
+    <!-- Koans -->
+    <rect x="40" y="245" width="85" height="45" rx="6" fill="white" stroke="#ED8A5A" stroke-width="1.5"/>
+    <text x="82" y="265" text-anchor="middle" font-size="11" font-weight="500" fill="#343A40">Koans</text>
+    <text x="82" y="280" text-anchor="middle" font-size="9" fill="#868E96">42 Tasks</text>
+
+    <!-- Eval -->
+    <rect x="135" y="245" width="85" height="45" rx="6" fill="white" stroke="#ED8A5A" stroke-width="1.5"/>
+    <text x="177" y="265" text-anchor="middle" font-size="11" font-weight="500" fill="#343A40">Eval</text>
+    <text x="177" y="280" text-anchor="middle" font-size="9" fill="#868E96">Metrics</text>
+  </g>
+
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- RIGHT SIDE: PYTHON COMPONENTS -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+
+  <!-- Python Section Header -->
+  <rect x="780" y="95" width="180" height="28" rx="4" fill="url(#pythonGrad)" filter="url(#softShadow)"/>
+  <text x="870" y="114" text-anchor="middle" font-size="12" font-weight="600" fill="white">Python Training</text>
+
+  <!-- Python Components -->
+  <g filter="url(#softShadow)">
+    <!-- SFT Dataset -->
+    <rect x="780" y="135" width="85" height="45" rx="6" fill="white" stroke="#5BA3CF" stroke-width="1.5"/>
+    <text x="822" y="155" text-anchor="middle" font-size="11" font-weight="500" fill="#343A40">SFT Data</text>
+    <text x="822" y="170" text-anchor="middle" font-size="9" fill="#868E96">Curation</text>
+
+    <!-- LoRA -->
+    <rect x="875" y="135" width="85" height="45" rx="6" fill="white" stroke="#5BA3CF" stroke-width="1.5"/>
+    <text x="917" y="155" text-anchor="middle" font-size="11" font-weight="500" fill="#343A40">LoRA</text>
+    <text x="917" y="170" text-anchor="middle" font-size="9" fill="#868E96">Fine-tune</text>
+
+    <!-- Merge/Consolidate -->
+    <rect x="780" y="190" width="85" height="45" rx="6" fill="white" stroke="#5BA3CF" stroke-width="1.5"/>
+    <text x="822" y="210" text-anchor="middle" font-size="11" font-weight="500" fill="#343A40">Share</text>
+    <text x="822" y="225" text-anchor="middle" font-size="9" fill="#868E96">Consolidate</text>
+
+    <!-- Viz -->
+    <rect x="875" y="190" width="85" height="45" rx="6" fill="white" stroke="#5BA3CF" stroke-width="1.5"/>
+    <text x="917" y="210" text-anchor="middle" font-size="11" font-weight="500" fill="#343A40">Viz</text>
+    <text x="917" y="225" text-anchor="middle" font-size="9" fill="#868E96">Plots</text>
+  </g>
+
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- BOTTOM: DATA STORES & EXTERNAL -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+
+  <!-- SQLite -->
+  <g filter="url(#softShadow)">
+    <rect x="200" y="530" width="120" height="55" rx="8" fill="white" stroke="#495057" stroke-width="1.5"/>
+    <!-- Database icon -->
+    <ellipse cx="260" cy="548" rx="18" ry="6" fill="none" stroke="#868E96" stroke-width="1.5"/>
+    <path d="M242,548 v20 a18,6 0 0,0 36,0 v-20" fill="none" stroke="#868E96" stroke-width="1.5"/>
+    <ellipse cx="260" cy="558" rx="18" ry="6" fill="none" stroke="#868E96" stroke-width="1.5" opacity="0.5"/>
+  </g>
+  <text x="260" y="590" text-anchor="middle" font-size="11" font-weight="500" fill="#343A40">SQLite</text>
+  <text x="260" y="605" text-anchor="middle" font-size="9" fill="#868E96">Episodes DB</text>
+
+  <!-- Ollama -->
+  <g filter="url(#softShadow)">
+    <rect x="680" y="530" width="120" height="55" rx="8" fill="white" stroke="#495057" stroke-width="1.5"/>
+    <!-- LLM icon (brain-like) -->
+    <circle cx="740" cy="555" r="15" fill="none" stroke="#868E96" stroke-width="1.5"/>
+    <path d="M730,550 Q735,545 740,550 Q745,545 750,550" fill="none" stroke="#868E96" stroke-width="1.5"/>
+    <path d="M730,560 Q735,565 740,560 Q745,565 750,560" fill="none" stroke="#868E96" stroke-width="1.5"/>
+  </g>
+  <text x="740" y="590" text-anchor="middle" font-size="11" font-weight="500" fill="#343A40">Ollama</text>
+  <text x="740" y="605" text-anchor="middle" font-size="9" fill="#868E96">Local LLM</text>
+
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- DATA FLOW ARROWS -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+
+  <!-- Rust to Day cycle -->
+  <path d="M220,235 Q280,235 350,220" fill="none" stroke="#ED8A5A" stroke-width="2" stroke-dasharray="4,3" marker-end="url(#arrowOrange)" opacity="0.7"/>
+
+  <!-- Day to SQLite -->
+  <path d="M450,260 Q380,400 290,520" fill="none" stroke="#868E96" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arrowGray)" opacity="0.6"/>
+  <text x="340" y="400" font-size="9" fill="#868E96" transform="rotate(-50, 340, 400)">episodes</text>
+
+  <!-- SQLite to Night -->
+  <path d="M300,530 Q320,480 330,460" fill="none" stroke="#5C7CFA" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arrowBlue)" opacity="0.6"/>
+
+  <!-- Night to Python -->
+  <path d="M360,380 Q500,320 780,180" fill="none" stroke="#5BA3CF" stroke-width="2" stroke-dasharray="4,3" opacity="0.5"/>
+
+  <!-- Python to Eval -->
+  <path d="M780,210 Q720,300 680,380" fill="none" stroke="#51CF66" stroke-width="2" stroke-dasharray="4,3" marker-end="url(#arrowGreen)" opacity="0.7"/>
+  <text x="720" y="310" font-size="9" fill="#868E96" transform="rotate(50, 720, 310)">adapter</text>
+
+  <!-- Eval to Ollama -->
+  <path d="M680,455 Q700,490 730,520" fill="none" stroke="#868E96" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arrowGray)" opacity="0.6"/>
+  <text x="720" y="485" font-size="9" fill="#868E96">promote</text>
+
+  <!-- Agent to Ollama -->
+  <path d="M220,180 Q400,500 680,555" fill="none" stroke="#868E96" stroke-width="1.5" stroke-dasharray="4,3" opacity="0.4"/>
+  <text x="420" y="420" font-size="9" fill="#ADB5BD">inference</text>
+
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- LEGEND -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+
+  <g transform="translate(40, 630)">
+    <text x="0" y="0" font-size="10" font-weight="600" fill="#495057">Legend</text>
+
+    <!-- Rust -->
+    <rect x="0" y="10" width="12" height="12" rx="2" fill="url(#rustGrad)"/>
+    <text x="18" y="20" font-size="9" fill="#495057">Rust (runtime, determinism)</text>
+
+    <!-- Python -->
+    <rect x="140" y="10" width="12" height="12" rx="2" fill="url(#pythonGrad)"/>
+    <text x="158" y="20" font-size="9" fill="#495057">Python (ML training)</text>
+
+    <!-- Data flow -->
+    <line x1="280" y1="16" x2="310" y2="16" stroke="#868E96" stroke-width="1.5" stroke-dasharray="4,3"/>
+    <text x="318" y="20" font-size="9" fill="#495057">Data flow</text>
+
+    <!-- Cycle -->
+    <circle cx="406" cy="16" r="6" fill="none" stroke="#868E96" stroke-width="1.5"/>
+    <text x="418" y="20" font-size="9" fill="#495057">Learning cycle</text>
+  </g>
+
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- ANNOTATIONS -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+
+  <!-- Annotation: Error families -->
+  <g opacity="0.9">
+    <rect x="40" y="310" width="180" height="70" rx="6" fill="#FFF9DB" stroke="#F59F00" stroke-width="1" stroke-dasharray="3,2"/>
+    <text x="50" y="328" font-size="9" font-weight="500" fill="#E67700">Error Families</text>
+    <text x="50" y="343" font-size="8" fill="#997404">BorrowChecker | Lifetimes</text>
+    <text x="50" y="356" font-size="8" fill="#997404">TraitBounds | ResultHandling</text>
+    <text x="50" y="369" font-size="8" fill="#997404">TypeMismatch | Other</text>
+  </g>
+
+  <!-- Annotation: Gating -->
+  <g opacity="0.9">
+    <rect x="780" y="260" width="180" height="70" rx="6" fill="#D3F9D8" stroke="#40C057" stroke-width="1" stroke-dasharray="3,2"/>
+    <text x="790" y="278" font-size="9" font-weight="500" fill="#2B8A3E">Gating Criteria</text>
+    <text x="790" y="293" font-size="8" fill="#2F9E44">pass_rate >= 0.85</text>
+    <text x="790" y="306" font-size="8" fill="#2F9E44">frozen_pass_rate: no regression</text>
+    <text x="790" y="319" font-size="8" fill="#2F9E44">repeat_error_rate: decreasing</text>
+  </g>
+
+  <!-- Annotation: Data mix -->
+  <g opacity="0.9">
+    <rect x="780" y="400" width="180" height="55" rx="6" fill="#E7F5FF" stroke="#339AF0" stroke-width="1" stroke-dasharray="3,2"/>
+    <text x="790" y="418" font-size="9" font-weight="500" fill="#1971C2">Training Data Mix</text>
+    <text x="790" y="433" font-size="8" fill="#1C7ED6">44% replay | 42% success</text>
+    <text x="790" y="446" font-size="8" fill="#1C7ED6">14% hard cases (oversampled)</text>
+  </g>
+
+</svg>

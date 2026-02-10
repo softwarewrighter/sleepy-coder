@@ -1,0 +1,36 @@
+flowchart TB
+    subgraph Rust["🦀 Rust Runtime"]
+        CLI[CLI]
+        Agent[Agent Loop]
+        Sandbox[Sandbox]
+        Capture[Episode Capture]
+        Eval[Evaluation Harness]
+        Koans[Task Koans]
+    end
+
+    subgraph Python["🐍 Python Training"]
+        SFT[SFT Dataset Builder]
+        LoRA[LoRA Trainer]
+        Merge[Share Consolidation]
+        Viz[Visualization]
+    end
+
+    subgraph External["External"]
+        Ollama[(Ollama LLM)]
+        SQLite[(SQLite DB)]
+    end
+
+    CLI --> Agent
+    CLI --> Eval
+    Agent --> Sandbox
+    Agent --> Ollama
+    Agent --> Capture
+    Capture --> SQLite
+    Koans --> Agent
+    Koans --> Eval
+
+    SQLite --> SFT
+    SFT --> LoRA
+    LoRA --> Merge
+    Merge --> Ollama
+    SQLite --> Viz

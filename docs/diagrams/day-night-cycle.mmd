@@ -1,0 +1,27 @@
+flowchart LR
+    subgraph Day["☀️ DAY: Agent Attempts"]
+        T[Load Task] --> S[Sandbox]
+        S --> Check{cargo check}
+        Check -->|Error| LLM[Call Ollama]
+        LLM --> Fix[Apply Fix]
+        Fix --> S
+        Check -->|Pass| E[Create Episode]
+    end
+
+    subgraph Night["🌙 NIGHT: Training"]
+        Load[Load Failed Episodes] --> Curate[Curate Dataset]
+        Curate --> Train[LoRA Fine-tune]
+        Train --> Adapter[Save Adapter]
+    end
+
+    subgraph Eval["📊 EVAL: Gating"]
+        Frozen[Run Frozen Set] --> Metrics[Compute Metrics]
+        Metrics --> Gate{Gates Pass?}
+        Gate -->|Yes| Promote[Promote Adapter]
+        Gate -->|No| Keep[Keep Previous]
+    end
+
+    E --> DB[(SQLite)]
+    DB --> Load
+    Adapter --> Frozen
+    Promote --> Ollama[(Ollama)]

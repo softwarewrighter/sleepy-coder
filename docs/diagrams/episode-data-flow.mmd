@@ -1,0 +1,22 @@
+flowchart LR
+    subgraph Capture
+        Agent[Agent Loop] -->|Episode| Store[EpisodeStore]
+        Store --> DB[(episodes.db)]
+    end
+
+    subgraph Export
+        DB -->|query_failed_then_fixed| JSONL[episodes.jsonl]
+    end
+
+    subgraph Training
+        JSONL --> Load[load_episodes_jsonl]
+        Load --> SFT[build_sft_dataset]
+        SFT --> Dataset[HF Dataset]
+        Dataset --> Trainer[LoRATrainer]
+    end
+
+    subgraph Composition["Data Mix"]
+        Replay[44% Replay] --> SFT
+        Success[42% Success] --> SFT
+        Hard[14% Hard Cases] --> SFT
+    end

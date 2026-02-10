@@ -1,0 +1,24 @@
+sequenceDiagram
+    participant CLI
+    participant Agent
+    participant Sandbox
+    participant Ollama
+    participant Store
+
+    CLI->>Agent: run(task)
+    Agent->>Sandbox: create(buggy_code)
+
+    loop Until pass or max_attempts
+        Sandbox->>Sandbox: cargo check
+        Sandbox-->>Agent: CompileResult{errors}
+
+        alt Has errors
+            Agent->>Ollama: generate_fix(code, error)
+            Ollama-->>Agent: fixed_code
+            Agent->>Sandbox: update_code(fixed_code)
+        else Success
+            Agent->>Store: insert(Episode{passed: true})
+        end
+    end
+
+    Agent-->>CLI: Result

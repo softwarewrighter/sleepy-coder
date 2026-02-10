@@ -9,6 +9,10 @@ sleepy-coder operates in a day/night cycle:
 - **Night**: Failed episodes are used to fine-tune the model with LoRA
 - **Eval**: Progress is tracked on a frozen evaluation set
 
+![System Architecture](docs/diagrams/system-architecture-dark.svg)
+
+![Day/Night Cycle](docs/diagrams/day-night-cycle-dark.svg)
+
 ## Quick Start
 
 ```bash
