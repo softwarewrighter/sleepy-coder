@@ -44,6 +44,7 @@ Thumbs.db
 /data/episodes/*.sqlite
 /data/sft/*.jsonl
 !/data/sft/corrections.jsonl
+!/data/sft/eval_aligned.jsonl
 /data/episodes/*.jsonl
 /data/export/
 
