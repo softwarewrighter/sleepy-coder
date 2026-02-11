@@ -1,220 +1,244 @@
-# Next Steps: Breaking the 73.3% Ceiling
+# Next Steps: Scaling Share and Continual Learning
 
-**Date**: 2026-02-09
-**Author**: Claude Opus 4.5
-**Status**: Recommendations
-
----
-
-## Executive Summary
-
-After 13 training cycles, the best result achieved is **73.3%** — still 3.4% below the baseline of 76.7%. Despite implementing the Share algorithm properly (SVD-based subspace extraction, coefficient-only training), we cannot improve because **the training data doesn't overlap with the evaluation tasks**.
+**Date**: 2026-02-10
+**Status**: Active
 
 ---
 
 ## Current State
 
-### Training History
+| Metric | Value |
+|--------|-------|
+| Baseline Pass Rate | 73.3% |
+| Best Share Result | 73.3% (no regression, no improvement) |
+| Available Adapters | 148 (51 unique patterns) |
+| Training Examples | ~1,045 total |
+| Persistent Failures | 8 koans |
 
-| Cycle | Approach | Pass Rate | Delta |
-|-------|----------|-----------|-------|
-| C0 | Baseline (no training) | **76.7%** | — |
-| C1 | Naive LoRA on failures | 60.0% | -16.7% |
-| C2-3 | Added replay buffer | 66-70% | -7 to -10% |
-| C9-10 | Minimal steps (20) | 73.3% | -3.4% |
-| C11 | Expanded data (112 ex) | 70.0% | -6.7% |
-| C12 | Rust 2024 koans | 73.3% | -3.4% |
-| C13 | Share (proper SVD) | 73.3% | -3.4% |
-
-### The 73.3% Ceiling
-
-We hit 73.3% three times (C9, C10, C12, C13) with different approaches. This suggests:
-1. The ceiling is **not** due to the training algorithm
-2. The ceiling is due to **what** we're training on
-
----
-
-## Root Cause: Domain Mismatch
-
-### Training Data vs Eval Data
-
-| Training Domains | Eval Domains |
-|-----------------|--------------|
-| yew_wasm (WASM/frontend) | borrow_checker |
-| axum_server (web servers) | trait_bounds |
-| sqlx_db (database) | result_handling |
-| cli_clap (CLI parsing) | |
-| refactoring | |
-| style_metrics | |
-
-**There is zero overlap.** Training on web frameworks doesn't help fix borrow checker errors.
-
-### Why This Matters
-
-The Share paper works because each adapter learns a **distinct skill** that contributes to a shared subspace. Our adapters learn skills the eval set doesn't test.
-
-```
-Share assumption:  Adapter_i teaches skill_i, eval tests skill_i
-Our reality:       Adapter_i teaches skill_i, eval tests skill_j
-                   → No transfer possible
-```
+### Persistent Failures (never fixed by any approach)
+- bc_003: mut_borrow_conflict
+- bc_005: double_mut_borrow
+- bc_010: return_local_ref
+- rh_004: option_ok_or
+- rh_005: result_map_err
+- tb_002: missing_clone
+- tb_007: missing_hash
+- tb_008: missing_ord
 
 ---
 
-## Recommendations
+## Strategy 1: Scale to 100+ Diverse Adapters
 
-### Option 1: Generate Training Data That Matches Eval (Recommended)
+### Why
+The Share paper (arXiv:2602.06043) uses 50-150 adapters. More adapters = richer shared subspace = more expressive continual learning.
 
-Create training examples that teach the **same patterns** tested in the eval set.
+### Current
+- 51 pattern-specific adapters (trained on 51 code patterns)
+- 6 domain-specific adapters (yew, axum, sqlx, cli, refactoring, style)
 
-**Implementation:**
+### Action Plan
 ```bash
-python scripts/generate_eval_aligned_koans.py
-```
+# 1. Train adapters on MORE distinct patterns
+# Generate 50 new patterns from the 8 failure cases
+python scripts/generate_failure_variants.py --count 50
 
-This script should:
-1. Analyze the 30 frozen eval koans
-2. Generate 100+ similar (but not identical) training examples
-3. Cover the same error patterns: move semantics, lifetime annotations, trait bounds, Result/Option handling
+# 2. Train an adapter for each
+for pattern in data/sft/patterns/failure_variants/*.jsonl; do
+    python cuda/scripts/train.py --data "$pattern" --output runs/adapters/variants/$(basename $pattern .jsonl)
+done
 
-**Expected outcome:** Training should directly improve eval performance since we're teaching what's being tested.
-
-### Option 2: Expand Eval Set to Match Training
-
-Add new eval tasks that test the domains we trained on.
-
-**Pros:**
-- Uses existing training data
-- Tests real-world scenarios (web, db, CLI)
-
-**Cons:**
-- Moves the goalposts
-- Original eval set was designed to test core Rust patterns
-
-### Option 3: Self-Synthesized Rehearsal (SSR)
-
-Use the base model itself to generate training data.
-
-**From ACL 2024 research:**
-> "LLMs can generate synthetic instances for rehearsal, achieving superior performance while being more data-efficient."
-
-**Implementation:**
-```bash
-python scripts/generate_ssr_data.py
-```
-
-1. For each eval koan pattern, ask the base model to generate 10 variants
-2. Filter for quality (must compile, must have the target error)
-3. Use base model to generate fixes
-4. Train on this synthetic data
-
-### Option 4: Direct Preference Optimization (DPO)
-
-Switch from SFT to preference-based learning.
-
-**Why:**
-- SFT memorizes specific input→output mappings
-- DPO learns to prefer good outputs over bad ones
-- Better generalization according to research
-
-**Implementation:**
-```bash
-python scripts/train_dpo.py --pairs data/sft/preference_pairs.jsonl
+# 3. Rebuild Share with 100+ adapters
+python scripts/share_full_algorithm.py phase1 --adapters runs/adapters/all_100 --output runs/share100
 ```
 
 ---
 
-## Recommended Action Plan
+## Strategy 2: LLM Distillation (Knowledge Transfer)
 
-### Phase 1: Align Training Data (This Week)
+### Why
+A large LLM (Claude, GPT-4) knows how to fix these Rust errors. Use it to generate training data for the small model.
 
-1. **Analyze eval koans** — Extract the specific error patterns being tested
-2. **Generate aligned training data** — 100+ examples per error family
-3. **Retrain with aligned data** — Use existing Share infrastructure
-4. **Evaluate** — Should see improvement if hypothesis is correct
+### How It Works
+1. Large LLM generates (buggy_code, error, fixed_code) triples
+2. Small model learns from these examples
+3. Knowledge is "distilled" into the small model
 
-### Phase 2: SSR Augmentation (If Phase 1 Works)
-
-1. Use base model to generate more variants
-2. Scale to 500+ training examples
-3. Retrain and measure
-
-### Phase 3: DPO (If SFT Plateaus)
-
-1. Create preference pairs from eval attempts
-2. Implement DPO training loop
-3. Compare to SFT results
-
----
-
-## Scripts to Create
-
-### 1. `scripts/generate_eval_aligned_koans.py`
-
-Generates training data that matches eval patterns.
-
+### Implementation
 ```python
-# Pseudocode
-def generate_aligned_koans():
-    # 1. Load frozen eval set
-    eval_koans = load_frozen_eval_set()
+# scripts/distill_from_llm.py
+import anthropic
 
-    # 2. Extract error patterns
-    patterns = {
-        'borrow_checker': extract_bc_patterns(eval_koans),
-        'trait_bounds': extract_tb_patterns(eval_koans),
-        'result_handling': extract_rh_patterns(eval_koans),
-    }
+client = anthropic.Client()
 
-    # 3. Generate variants for each pattern
-    training_data = []
-    for family, family_patterns in patterns.items():
-        for pattern in family_patterns:
-            variants = generate_variants(pattern, n=10)
-            training_data.extend(variants)
+FAILURE_PATTERNS = [
+    "mut_borrow_conflict",
+    "double_mut_borrow",
+    "return_local_ref",
+    # ... etc
+]
 
-    # 4. Save as training JSONL
-    save_jsonl(training_data, 'data/sft/eval_aligned.jsonl')
+def generate_training_pair(pattern: str) -> dict:
+    """Use Claude to generate a training example."""
+    prompt = f"""Generate a Rust code example that demonstrates the "{pattern}" error.
+
+Output JSON with:
+- buggy_code: The code with the error
+- error_message: The rustc error
+- fixed_code: The corrected code
+- explanation: Why this fix works
+
+Make the example realistic and non-trivial."""
+
+    response = client.messages.create(
+        model="claude-sonnet-4-20250514",
+        max_tokens=2000,
+        messages=[{"role": "user", "content": prompt}]
+    )
+    return parse_response(response)
+
+# Generate 100 examples per failure pattern
+for pattern in FAILURE_PATTERNS:
+    examples = [generate_training_pair(pattern) for _ in range(100)]
+    save_jsonl(examples, f"data/sft/distilled/{pattern}.jsonl")
 ```
 
-### 2. `scripts/generate_ssr_data.py`
-
-Uses base model to synthesize training data.
-
-### 3. `scripts/train_dpo.py`
-
-Implements Direct Preference Optimization.
-
-### 4. `scripts/analyze_eval_coverage.py`
-
-Measures overlap between training and eval domains.
+### Expected Outcome
+- 800+ high-quality training examples (100 × 8 patterns)
+- Directly aligned with failure cases
+- Diverse code structures and contexts
 
 ---
 
-## Success Criteria
+## Strategy 3: Incremental Continual Learning
 
-| Metric | Current | Target | Stretch |
-|--------|---------|--------|---------|
-| Pass Rate | 73.3% | ≥76.7% (baseline) | ≥85% |
-| Regression | -3.4% | 0% | +10% |
-| Training/Eval Overlap | 0% | ≥50% | ≥80% |
+### Why
+Share is designed for continual learning. Instead of one-shot training, keep adding knowledge in cycles.
+
+### The Day/Night Cycle
+```
+Day:   Agent attempts to fix koans
+       ↓
+       Some fail → capture error + wrong attempt
+       ↓
+Night: Train new coefficients on failures (Phase 2)
+       ↓
+       Merge into Share model (Phase 3)
+       ↓
+       Repeat
+```
+
+### Implementation
+```bash
+# Automated continual learning loop
+for cycle in $(seq 1 100); do
+    echo "=== Cycle $cycle ==="
+
+    # Day: Eval and capture failures
+    cargo run -q --release -- eval --model sleepy-share --cycle $cycle
+
+    # Extract failed attempts
+    python scripts/extract_failures.py --cycle $cycle --output data/sft/cycle_${cycle}_failures.jsonl
+
+    # Night: Train on failures (Phase 2)
+    python scripts/share_full_algorithm.py phase2 \
+        --share runs/share_current \
+        --data data/sft/cycle_${cycle}_failures.jsonl \
+        --task-id cycle_$cycle
+
+    # Merge (Phase 3)
+    python scripts/share_full_algorithm.py phase3 \
+        --share runs/share_current \
+        --trained runs/phase2_cycle_$cycle \
+        --task-id cycle_$cycle \
+        --output runs/share_current
+
+    # Export and test
+    python scripts/share_full_algorithm.py export \
+        --share runs/share_current \
+        --task averaged \
+        --output runs/adapters/cycle_$cycle
+done
+```
 
 ---
 
-## Key Insight
+## Strategy 4: Learning from Mistakes in Practical Use
 
-> **The model isn't failing to learn. It's learning the wrong things.**
+### The Corrections Intake System
+Already designed in the codebase! See `data/sft/corrections.jsonl`.
+
+### How It Works
+1. User runs sleepy-coder on real code
+2. Model attempts fix, fails
+3. User provides correct fix
+4. (wrong_attempt, correct_fix) pair is captured
+5. Nightly training incorporates this
+
+### Implementation
+```python
+# In the agent loop, capture corrections
+def capture_correction(task_id: str, wrong_attempt: str, correct_fix: str):
+    """Log a user-provided correction for later training."""
+    entry = {
+        "task_id": task_id,
+        "wrong_attempt": wrong_attempt,
+        "correct_fix": correct_fix,
+        "timestamp": datetime.now().isoformat(),
+        "source": "user_correction"
+    }
+    with open("data/sft/corrections.jsonl", "a") as f:
+        f.write(json.dumps(entry) + "\n")
+```
+
+### Nightly Training Job
+```bash
+# Run after each day of practical use
+python scripts/train_on_corrections.py
+```
+
+---
+
+## Recommended Priority
+
+### Immediate (This Session)
+1. **Implement LLM distillation** - Generate 100 examples per failure pattern using Claude
+2. **Train adapters** - One per failure pattern with distilled data
+
+### Short Term (Next Session)
+3. **Rebuild Share100** - Combine all adapters (51 patterns + 8 failure-specific + others)
+4. **Implement task routing** - Use error type to select specific coefficients instead of averaging
+
+### Medium Term
+5. **Automate day/night cycle** - Continuous learning from eval failures
+6. **Add corrections intake** - Learn from user-provided fixes
+
+---
+
+## Key Insight from Today
+
+> **Averaging coefficients returns to baseline behavior.**
 >
-> Share, replay, conservative hyperparameters — none of these matter if we're teaching web framework patterns and testing borrow checker fixes.
-
-The fix is simple: **teach what you test**.
+> The Share model stores per-task coefficients. When we average them for inference, we lose specialization. The solution is **task routing**: detect error type → select appropriate task coefficients → apply specialized fix.
 
 ---
 
-## References
+## Files to Create
 
-- [Share Paper (arXiv:2602.06043)](https://arxiv.org/abs/2602.06043)
-- [Self-Synthesized Rehearsal (ACL 2024)](https://aclanthology.org/2024.acl-long.77/)
-- [DPO Paper (arXiv:2305.18290)](https://arxiv.org/abs/2305.18290)
-- [Course Correction Analysis](./course-correction.md)
-- [Training Changes Log](./changes.md)
+| Script | Purpose |
+|--------|---------|
+| `scripts/distill_from_llm.py` | Generate training data using Claude |
+| `scripts/generate_failure_variants.py` | Create variations of failure patterns |
+| `scripts/extract_failures.py` | Extract failed attempts from eval logs |
+| `scripts/train_on_corrections.py` | Train on user-provided corrections |
+| `scripts/task_router.py` | Route errors to appropriate Share coefficients |
+
+---
+
+## Success Metrics
+
+| Metric | Current | Target |
+|--------|---------|--------|
+| Pass Rate | 73.3% | ≥80% |
+| Adapters in Share | 51 | 100+ |
+| Training Examples | 1,045 | 5,000+ |
+| Failure Patterns Covered | 8/8 | 8/8 with 100+ examples each |
