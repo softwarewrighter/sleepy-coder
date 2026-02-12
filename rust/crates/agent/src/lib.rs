@@ -132,6 +132,7 @@ impl OllamaClient {
 
     /// Generate a code fix for the given buggy code and error message.
     pub async fn generate_fix(&self, buggy_code: &str, error_message: &str) -> Result<String> {
+        let hints = Self::get_error_hints(error_message);
         let prompt = format!(
             r#"Fix the following Rust code that has a compilation error.
 
@@ -142,7 +143,7 @@ impl OllamaClient {
 
 ## Compiler Error:
 {error_message}
-
+{hints}
 ## Instructions:
 - Return ONLY the fixed Rust code
 - Do not include any explanation
@@ -155,6 +156,115 @@ impl OllamaClient {
 
         let response = self.generate(&prompt).await?;
         Ok(Self::extract_code(&response.response))
+    }
+
+    /// Get error-specific hints based on the compiler error message.
+    fn get_error_hints(error_message: &str) -> String {
+        let error_lower = error_message.to_lowercase();
+
+        // Borrow checker hints
+        if error_lower.contains("cannot borrow")
+            && error_lower.contains("mutable")
+            && error_lower.contains("immutable")
+        {
+            return r#"
+## Hint (Mutable/Immutable Borrow Conflict):
+When you have an immutable borrow (&T), you cannot create a mutable borrow (&mut T) while the immutable borrow is still in use.
+FIX: Either copy the value instead of borrowing (remove &), or restructure code so borrows don't overlap.
+"#
+            .to_string();
+        }
+
+        if error_lower.contains("cannot borrow") && error_lower.contains("mutable more than once") {
+            return r#"
+## Hint (Double Mutable Borrow):
+Rust allows only ONE mutable reference at a time. Two &mut references cannot coexist.
+FIX: Use the first mutable borrow completely before creating the second one. Restructure so borrows are sequential, not overlapping.
+"#
+            .to_string();
+        }
+
+        if error_lower.contains("returns a reference to data owned by the current function")
+            || error_lower.contains("cannot return reference to local variable")
+            || (error_lower.contains("borrowed value does not live long enough")
+                && error_lower.contains("return"))
+        {
+            return r#"
+## Hint (Returning Reference to Local):
+You cannot return a reference (&T or &str) to a value created inside the function - it will be dropped.
+FIX: Return an owned type instead. Change &str to String, &T to T, or use .to_string()/.to_owned()/.clone().
+"#
+            .to_string();
+        }
+
+        // Result/Option handling hints
+        if error_lower.contains("expected")
+            && error_lower.contains("result")
+            && error_lower.contains("option")
+        {
+            return r#"
+## Hint (Option to Result Conversion):
+Option<T> and Result<T, E> are different types. You need to convert between them.
+FIX: Use .ok_or("error message") or .ok_or_else(|| Error) to convert Option to Result.
+"#
+            .to_string();
+        }
+
+        if error_lower.contains("the `?` operator can only be used")
+            || error_lower.contains("cannot use the `?` operator")
+        {
+            return r#"
+## Hint (? Operator Requires Result Return):
+The ? operator can only be used in functions that return Result or Option.
+FIX: Change the function signature to return Result<T, E>. For main(), use:
+fn main() -> Result<(), Box<dyn std::error::Error>> { ... Ok(()) }
+"#
+            .to_string();
+        }
+
+        // Trait bounds hints - check for both "doesn't implement" and "is not implemented"
+        let missing_trait = error_lower.contains("doesn't implement")
+            || error_lower.contains("is not implemented");
+
+        if missing_trait && error_lower.contains("clone") {
+            return r#"
+## Hint (Missing Clone):
+The Clone trait is not automatically implemented. You must derive or implement it.
+FIX: Add #[derive(Clone)] above the struct definition.
+"#
+            .to_string();
+        }
+
+        if missing_trait && (error_lower.contains("hash") || error_lower.contains("hashmap")) {
+            return r#"
+## Hint (Missing Hash for HashMap Key):
+HashMap keys must implement Hash, PartialEq, and Eq traits.
+FIX: Add #[derive(Hash, PartialEq, Eq)] above the struct definition. All three are required together.
+"#
+            .to_string();
+        }
+
+        if missing_trait && error_lower.contains("ord") {
+            return r#"
+## Hint (Missing Ord for Sorting):
+Sorting requires Ord trait, which depends on PartialOrd, PartialEq, and Eq.
+FIX: Add #[derive(PartialEq, Eq, PartialOrd, Ord)] above the struct definition. All four are required.
+"#
+            .to_string();
+        }
+
+        // Generic trait bound hint
+        if error_lower.contains("the trait bound") && error_lower.contains("is not satisfied") {
+            return r#"
+## Hint (Missing Trait Bound):
+A required trait is not implemented for this type.
+FIX: Add #[derive(...)] with the missing trait, or add a trait bound to the generic parameter.
+"#
+            .to_string();
+        }
+
+        // No specific hint found
+        String::new()
     }
 
     /// Extract code from LLM response, stripping markdown fences if present.
@@ -484,5 +594,86 @@ mod tests {
         let result = agent.run(&task).await.unwrap();
         println!("Solved: {}, Attempts: {}", result.solved, result.attempts);
         println!("Final code: {}", result.final_code);
+    }
+
+    // Tests for error hints
+    #[test]
+    fn test_hint_mutable_immutable_conflict() {
+        let error = "cannot borrow `v` as mutable because it is also borrowed as immutable";
+        let hint = OllamaClient::get_error_hints(error);
+        assert!(hint.contains("Mutable/Immutable Borrow Conflict"));
+        assert!(hint.contains("copy the value"));
+    }
+
+    #[test]
+    fn test_hint_double_mutable_borrow() {
+        let error = "cannot borrow `s` as mutable more than once at a time";
+        let hint = OllamaClient::get_error_hints(error);
+        assert!(hint.contains("Double Mutable Borrow"));
+        assert!(hint.contains("ONE mutable reference"));
+    }
+
+    #[test]
+    fn test_hint_return_local_reference() {
+        let error = "cannot return reference to local variable `s`";
+        let hint = OllamaClient::get_error_hints(error);
+        assert!(hint.contains("Returning Reference to Local"));
+        assert!(hint.contains("owned type"));
+    }
+
+    #[test]
+    fn test_hint_option_to_result() {
+        let error = "expected `Result<i32, &str>`, found `Option<i32>`";
+        let hint = OllamaClient::get_error_hints(error);
+        assert!(hint.contains("Option to Result"));
+        assert!(hint.contains("ok_or"));
+    }
+
+    #[test]
+    fn test_hint_question_mark_operator() {
+        let error = "the `?` operator can only be used in a function that returns `Result`";
+        let hint = OllamaClient::get_error_hints(error);
+        assert!(hint.contains("? Operator Requires Result"));
+        assert!(hint.contains("fn main()"));
+    }
+
+    #[test]
+    fn test_hint_missing_clone() {
+        let error = "the method `clone` exists but the following trait bounds were not satisfied: `Data` doesn't implement `Clone`";
+        let hint = OllamaClient::get_error_hints(error);
+        assert!(hint.contains("Missing Clone"));
+        assert!(hint.contains("#[derive(Clone)]"));
+    }
+
+    #[test]
+    fn test_hint_missing_hash() {
+        // Matches rustc output: "the trait `Hash` is not implemented for `Key`"
+        let error = "the trait `Hash` is not implemented for `Key`";
+        let hint = OllamaClient::get_error_hints(error);
+        assert!(hint.contains("Missing Hash"));
+        assert!(hint.contains("Hash, PartialEq, Eq"));
+    }
+
+    #[test]
+    fn test_hint_missing_ord() {
+        // Matches rustc output: "the trait `Ord` is not implemented for `Score`"
+        let error = "the trait `Ord` is not implemented for `Score`";
+        let hint = OllamaClient::get_error_hints(error);
+        assert!(hint.contains("Missing Ord"));
+        assert!(hint.contains("PartialEq, Eq, PartialOrd, Ord"));
+    }
+
+    #[test]
+    fn test_hint_generic_trait_bound() {
+        let error = "the trait bound `T: Display` is not satisfied";
+        let hint = OllamaClient::get_error_hints(error);
+        assert!(hint.contains("Missing Trait Bound"));
+    }
+
+    #[test]
+    fn test_hint_no_match() {
+        let error = "some random error message";
+        let hint = OllamaClient::get_error_hints(error);
+        assert!(hint.is_empty());
     }
 }
