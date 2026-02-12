@@ -1,18 +1,21 @@
 # Project Status: Sleepy Coder
 
-## Current Phase: Phase 2 - PaCT (Complete - Negative Result)
+## Current Phase: Prompt Engineering (Success!)
 
-**Last Updated**: 2026-02-11
+**Last Updated**: 2026-02-12
 
 ---
 
-## Critical Finding: LoRA Fine-Tuning Cannot Improve This Model
+## Key Result: Prompt Engineering Succeeds Where LoRA Failed
 
-After extensive experimentation (51 adapters, multiple algorithms, various hyperparameters), we have conclusively determined that **LoRA fine-tuning cannot improve the base model (Qwen2.5-Coder-1.5B-Instruct) for this task**.
+After LoRA fine-tuning proved ineffective, **prompt engineering improved pass rate from 73.3% to 83.3% average** (up to 86.7% peak).
 
-Every approach tried caused regressions. The baseline represents the ceiling.
+Error-specific hints added to the prompt guide the model to fix:
+- Borrow checker errors (mutable/immutable conflicts)
+- Trait bound errors (Hash, Ord with full trait hierarchies)
+- Result/Option conversions
 
-See [docs/learnings.md](./learnings.md) for detailed experiment logs.
+See [rust/crates/agent/src/lib.rs](../rust/crates/agent/src/lib.rs) `get_error_hints()` function.
 
 ---
 
@@ -26,7 +29,8 @@ See [docs/learnings.md](./learnings.md) for detailed experiment logs.
 | Targeted full LoRA (7 patterns) | 63.3% | -10% | 4+ |
 | Replay buffer | 70.0% | -3.3% | 2 |
 | Phase 2 coef-only (10K params) | 66.7% | -6.6% | 2 |
-| **Share Full (Ph2+Ph3)** | **73.3%** | **0%** | **0** |
+| Share Full (Ph2+Ph3) | 73.3% | 0% | 0 |
+| **Prompt Engineering** | **83.3%** | **+10%** | **~0** |
 
 ### Key Insights
 
@@ -50,8 +54,9 @@ See [docs/learnings.md](./learnings.md) for detailed experiment logs.
 |-------|--------|----------|
 | Phase 0: Setup | Complete | 100% |
 | Phase 1: MVP | Complete | 100% |
-| Phase 2: PaCT | **Complete (Negative Result)** | 100% |
-| Phase 3: Production | Blocked | 0% |
+| Phase 2: PaCT | Complete (Negative Result) | 100% |
+| **Phase 2b: Prompt Engineering** | **Complete (Success!)** | **100%** |
+| Phase 3: Production | Unblocked | 0% |
 
 ---
 
@@ -93,9 +98,9 @@ See [docs/learnings.md](./learnings.md) for detailed experiment logs.
 
 Since LoRA fine-tuning is not viable, alternative approaches:
 
-1. **Prompt Engineering**
-   - Improve system prompts with error-specific guidance
-   - Add few-shot examples in context
+1. **Prompt Engineering** ✅ **IMPLEMENTED - SUCCESS**
+   - Added error-specific hints to prompts
+   - Pass rate improved from 73.3% → 83.3% average
    - No weight modification needed
 
 2. **Multi-Turn Repair**
@@ -127,11 +132,11 @@ Since LoRA fine-tuning is not viable, alternative approaches:
 
 | Metric | Baseline | Best Achieved | Target |
 |--------|----------|---------------|--------|
-| Pass Rate | **73.3%** | 73.3% | ≥ 76.7% |
+| Pass Rate | 73.3% | **86.7%** | ≥ 76.7% |
 | Median Steps | 2.0 | 2.0 | ≤ 2.0 |
-| Regressions | 0 | 0 | 0 |
+| Regressions | 0 | ~0 | 0 |
 
-**Conclusion**: Target not achievable with LoRA on this base model.
+**Conclusion**: Target exceeded via prompt engineering! LoRA failed but hints work.
 
 ---
 
@@ -146,6 +151,7 @@ Since LoRA fine-tuning is not viable, alternative approaches:
 | C13 | 02-09 | Share (6 adapters) | 73.3% | Proper implementation |
 | C14+ | 02-10 | Share (51 adapters) | 70.0-73.3% | More adapters = worse |
 | Final | 02-10 | Share Full (Ph2+Ph3) | 73.3% | Prevents forgetting, no improvement |
+| **C100-102** | **02-12** | **Prompt Engineering** | **80-86.7%** | **Error-specific hints work!** |
 
 ---
 
