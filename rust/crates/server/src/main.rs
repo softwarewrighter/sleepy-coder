@@ -34,8 +34,8 @@ async fn main() -> anyhow::Result<()> {
     // Build API routes
     let api_routes = Router::new()
         .route("/tasks", get(list_tasks))
-        .route("/tasks/{id}", get(get_task))
-        .route("/tasks/{id}/diff", get(get_task_diff))
+        .route("/tasks/:id", get(get_task))
+        .route("/tasks/:id/diff", get(get_task_diff))
         .route("/analytics", get(get_analytics))
         .route("/fix/start", post(start_fix_placeholder));
 
