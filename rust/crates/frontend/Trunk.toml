@@ -7,13 +7,13 @@ watch = ["src", "index.html", "styles"]
 
 [serve]
 address = "127.0.0.1"
-port = 8080
+port = 5971
 
 [[proxy]]
 rewrite = "/api"
-backend = "http://localhost:3000/api"
+backend = "http://localhost:5970/api"
 
 [[proxy]]
 rewrite = "/ws"
-backend = "ws://localhost:3000/ws"
+backend = "ws://localhost:5970/ws"
 ws = true

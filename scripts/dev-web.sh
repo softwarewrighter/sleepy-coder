@@ -9,13 +9,13 @@ PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 RUST_DIR="$PROJECT_ROOT/rust"
 
 start_server() {
-    echo "Starting backend server on http://localhost:3000..."
+    echo "Starting backend server on http://localhost:5970..."
     cd "$RUST_DIR"
     cargo run -p server
 }
 
 start_frontend() {
-    echo "Starting frontend dev server on http://localhost:8080..."
+    echo "Starting frontend dev server on http://localhost:5971..."
     cd "$RUST_DIR/crates/frontend"
     trunk serve
 }
@@ -44,8 +44,8 @@ case "${1:-both}" in
         echo ""
         echo "Or use tmux/screen to run both in background."
         echo ""
-        echo "Backend will be at: http://localhost:3000"
-        echo "Frontend will be at: http://localhost:8080"
+        echo "Backend will be at: http://localhost:5970"
+        echo "Frontend will be at: http://localhost:5971"
         ;;
     *)
         echo "Usage: $0 [server|frontend|build|both]"

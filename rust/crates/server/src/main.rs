@@ -49,7 +49,7 @@ async fn main() -> anyhow::Result<()> {
         .with_state(state);
 
     // Start server
-    let addr = SocketAddr::from(([0, 0, 0, 0], 3000));
+    let addr = SocketAddr::from(([0, 0, 0, 0], 5970));
     println!("Server listening on http://{}", addr);
 
     let listener = tokio::net::TcpListener::bind(addr).await?;

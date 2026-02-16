@@ -314,7 +314,11 @@ async fn run_eval(cycle: u32, max_attempts: u32, model: String, save_dir: &str) 
         serde_json::to_writer(&mut writer, &result.episode)?;
         writeln!(writer)?;
     }
-    println!("Saved {} episodes to {}", run.task_count(), episodes_file.display());
+    println!(
+        "Saved {} episodes to {}",
+        run.task_count(),
+        episodes_file.display()
+    );
 
     println!();
     println!("=== Evaluation Results ===");
@@ -508,8 +512,7 @@ fn run_sleep(
     // Step 3: Train LoRA adapter
     println!("Step 2: Training LoRA adapter...");
     let mut train_cmd = Command::new("sleepy-pact");
-    train_cmd
-        .args(["train", "-d", &sft_output, "-o", output, "-m", model]);
+    train_cmd.args(["train", "-d", &sft_output, "-o", output, "-m", model]);
 
     if quick {
         train_cmd.arg("--quick");
@@ -576,7 +579,10 @@ fn run_backup(output_dir: &str, include_models: bool) -> Result<()> {
             }
         }
         if count > 0 {
-            println!("Copied {count} episode files to {}", backup_episodes_dir.display());
+            println!(
+                "Copied {count} episode files to {}",
+                backup_episodes_dir.display()
+            );
         }
     }
 
@@ -612,7 +618,11 @@ fn run_backup(output_dir: &str, include_models: bool) -> Result<()> {
                 .filter_map(|e| e.ok())
             {
                 let path = entry.path();
-                if path.extension().map(|e| e == "safetensors").unwrap_or(false) {
+                if path
+                    .extension()
+                    .map(|e| e == "safetensors")
+                    .unwrap_or(false)
+                {
                     let relative = path.strip_prefix(runs_dir).unwrap();
                     let dest = backup_models_dir.join(relative);
                     if let Some(parent) = dest.parent() {
@@ -623,7 +633,10 @@ fn run_backup(output_dir: &str, include_models: bool) -> Result<()> {
                 }
             }
             if copied > 0 {
-                println!("Copied {copied} model files to {}", backup_models_dir.display());
+                println!(
+                    "Copied {copied} model files to {}",
+                    backup_models_dir.display()
+                );
             }
         }
     }
@@ -632,7 +645,10 @@ fn run_backup(output_dir: &str, include_models: bool) -> Result<()> {
     println!("Backup complete!");
     println!();
     println!("To sync to Dropbox, copy this directory:");
-    println!("  cp -r {} ~/Dropbox/sleepy-coder-backups/", backup_dir.display());
+    println!(
+        "  cp -r {} ~/Dropbox/sleepy-coder-backups/",
+        backup_dir.display()
+    );
 
     Ok(())
 }

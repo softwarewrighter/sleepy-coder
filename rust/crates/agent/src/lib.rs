@@ -133,9 +133,10 @@ impl OllamaClient {
     /// Generate a code fix for the given buggy code and error message.
     pub async fn generate_fix(&self, buggy_code: &str, error_message: &str) -> Result<String> {
         let hints = Self::get_error_hints(error_message);
+        let examples = Self::get_few_shot_examples(error_message);
         let prompt = format!(
             r#"Fix the following Rust code that has a compilation error.
-
+{examples}
 ## Buggy Code:
 ```rust
 {buggy_code}
@@ -156,6 +157,63 @@ impl OllamaClient {
 
         let response = self.generate(&prompt).await?;
         Ok(Self::extract_code(&response.response))
+    }
+
+    /// Get few-shot examples based on the error pattern.
+    fn get_few_shot_examples(error_message: &str) -> String {
+        let error_lower = error_message.to_lowercase();
+
+        // Return local reference / lifetime errors suggesting owned return
+        // Matches: "missing lifetime specifier" + "return type contains a borrowed value"
+        // Or: "cannot return reference to local variable"
+        if (error_lower.contains("missing lifetime")
+            && error_lower.contains("return")
+            && error_lower.contains("borrowed value"))
+            || error_lower.contains("cannot return reference to local variable")
+            || error_lower.contains("returns a reference to data owned by the current function")
+            || (error_lower.contains("return an owned value")
+                || error_lower.contains("want to return an owned"))
+        {
+            return r#"
+## Example Fix (similar error):
+Buggy: fn make_greeting() -> &str { let s = String::from("hi"); &s }
+Fixed: fn make_greeting() -> String { String::from("hi") }
+"#
+            .to_string();
+        }
+
+        // Missing Clone - match "no method named `clone` found"
+        if error_lower.contains("no method named")
+            && error_lower.contains("clone")
+            && error_lower.contains("found")
+        {
+            return r#"
+## Example Fix (similar error):
+Buggy: struct Point { x: i32 } fn main() { let p = Point { x: 1 }; let p2 = p.clone(); }
+Fixed: #[derive(Clone)] struct Point { x: i32 } fn main() { let p = Point { x: 1 }; let p2 = p.clone(); }
+"#
+            .to_string();
+        }
+
+        // Option to Result conversion with ok_or
+        // Matches: "expected `Result<...>`, found `Option<...>`"
+        if (error_lower.contains("expected")
+            && error_lower.contains("result")
+            && error_lower.contains("option"))
+            || (error_lower.contains("mismatched types")
+                && error_lower.contains("option")
+                && error_lower.contains("result"))
+        {
+            return r#"
+## Example Fix (similar error):
+Buggy: fn get_first(v: &[i32]) -> Result<i32, &str> { v.first().copied() }
+Fixed: fn get_first(v: &[i32]) -> Result<i32, &str> { v.first().copied().ok_or("empty") }
+"#
+            .to_string();
+        }
+
+        // No example needed
+        String::new()
     }
 
     /// Get error-specific hints based on the compiler error message.
@@ -188,6 +246,10 @@ FIX: Use the first mutable borrow completely before creating the second one. Res
             || error_lower.contains("cannot return reference to local variable")
             || (error_lower.contains("borrowed value does not live long enough")
                 && error_lower.contains("return"))
+            || (error_lower.contains("missing lifetime")
+                && error_lower.contains("return")
+                && (error_lower.contains("borrowed value")
+                    || error_lower.contains("return an owned")))
         {
             return r#"
 ## Hint (Returning Reference to Local):
@@ -223,10 +285,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> { ... Ok(()) }
         }
 
         // Trait bounds hints - check for both "doesn't implement" and "is not implemented"
-        let missing_trait = error_lower.contains("doesn't implement")
-            || error_lower.contains("is not implemented");
+        let missing_trait =
+            error_lower.contains("doesn't implement") || error_lower.contains("is not implemented");
 
-        if missing_trait && error_lower.contains("clone") {
+        // Clone hint - also match "no method named `clone` found"
+        if (missing_trait && error_lower.contains("clone"))
+            || (error_lower.contains("no method named")
+                && error_lower.contains("clone")
+                && error_lower.contains("found"))
+        {
             return r#"
 ## Hint (Missing Clone):
 The Clone trait is not automatically implemented. You must derive or implement it.
@@ -675,5 +742,39 @@ mod tests {
         let error = "some random error message";
         let hint = OllamaClient::get_error_hints(error);
         assert!(hint.is_empty());
+    }
+
+    // Tests for few-shot examples
+    #[test]
+    fn test_example_return_local_ref() {
+        // Matches actual rustc: "missing lifetime specifier" + "return type contains a borrowed value"
+        let error = "missing lifetime specifier: return type contains a borrowed value, but there is no value for it to be borrowed from. Return an owned value.";
+        let example = OllamaClient::get_few_shot_examples(error);
+        assert!(example.contains("Example Fix"));
+        assert!(example.contains("-> String"));
+    }
+
+    #[test]
+    fn test_example_missing_clone() {
+        // Matches actual rustc: "no method named `clone` found for struct `Data`"
+        let error = "no method named `clone` found for struct `Data`";
+        let example = OllamaClient::get_few_shot_examples(error);
+        assert!(example.contains("Example Fix"));
+        assert!(example.contains("#[derive(Clone)]"));
+    }
+
+    #[test]
+    fn test_example_option_to_result() {
+        let error = "expected `Result<i32, &str>`, found `Option<i32>`";
+        let example = OllamaClient::get_few_shot_examples(error);
+        assert!(example.contains("Example Fix"));
+        assert!(example.contains("ok_or"));
+    }
+
+    #[test]
+    fn test_example_no_match() {
+        let error = "some random error message";
+        let example = OllamaClient::get_few_shot_examples(error);
+        assert!(example.is_empty());
     }
 }

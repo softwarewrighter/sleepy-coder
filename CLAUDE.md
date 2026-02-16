@@ -70,7 +70,22 @@ Each learning episode captures:
 cd rust && cargo run -- list
 cd rust && cargo run -- run --count 5 --family borrow
 cd rust && cargo run -- eval --cycle 0
+
+# Web UI development
+./scripts/dev-web.sh server    # Backend on :5970
+./scripts/dev-web.sh frontend  # Frontend on :5971
 ```
+
+## Web UI Ports
+
+**IMPORTANT: Use project-specific ports, not common ports like 8080/3000.**
+
+| Service | Port | URL |
+|---------|------|-----|
+| Backend (Axum) | 5970 | http://localhost:5970 |
+| Frontend (Trunk) | 5971 | http://localhost:5971 |
+
+The frontend proxies `/api` and `/ws` to the backend automatically.
 
 ## Code Style
 
