@@ -1,0 +1,14 @@
+[package]
+name = "web_types"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Shared types for sleepy-coder web UI (API requests/responses, WebSocket messages)"
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+uuid.workspace = true
+chrono.workspace = true
+core_types.workspace = true

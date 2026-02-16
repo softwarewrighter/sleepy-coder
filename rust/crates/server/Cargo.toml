@@ -1,0 +1,36 @@
+[package]
+name = "server"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Axum web server for sleepy-coder dashboard"
+
+[[bin]]
+name = "sleepy-server"
+path = "src/main.rs"
+
+[dependencies]
+# Async runtime
+tokio.workspace = true
+
+# Web framework
+axum.workspace = true
+tower-http.workspace = true
+futures.workspace = true
+
+# Serialization
+serde.workspace = true
+serde_json.workspace = true
+
+# Unique IDs
+uuid.workspace = true
+
+# Error handling
+anyhow.workspace = true
+thiserror.workspace = true
+
+# Internal crates
+core_types.workspace = true
+web_types.workspace = true
+tasks_rust_koans = { path = "../tasks_rust_koans" }

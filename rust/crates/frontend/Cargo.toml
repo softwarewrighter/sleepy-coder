@@ -1,0 +1,35 @@
+[package]
+name = "frontend"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Yew WASM frontend for sleepy-coder dashboard"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+# Yew framework
+yew.workspace = true
+yew-router.workspace = true
+
+# HTTP client for WASM
+gloo-net.workspace = true
+gloo-timers.workspace = true
+wasm-bindgen-futures.workspace = true
+
+# WASM bindgen
+wasm-bindgen = "0.2"
+web-sys = { version = "0.3", features = ["console", "HtmlInputElement", "HtmlSelectElement"] }
+
+# Serialization
+serde.workspace = true
+serde_json.workspace = true
+
+# Unique IDs (need js feature for WASM)
+uuid = { version = "1", features = ["v4", "serde", "js"] }
+
+# Shared types
+web_types.workspace = true
+core_types.workspace = true

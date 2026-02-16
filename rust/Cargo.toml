@@ -8,6 +8,9 @@ members = [
     "crates/tasks_rust_koans",
     "crates/eval",
     "crates/cli",
+    "crates/web_types",
+    "crates/server",
+    "crates/frontend",
 ]
 
 [workspace.package]
@@ -50,6 +53,21 @@ sha2 = "0.10"
 # File walking
 walkdir = "2"
 
+# Web server
+axum = { version = "0.7", features = ["ws", "macros"] }
+tower-http = { version = "0.6", features = ["cors", "fs"] }
+futures = "0.3"
+
+# Frontend (WASM)
+yew = { version = "0.21", features = ["csr"] }
+yew-router = "0.18"
+gloo-net = "0.6"
+gloo-timers = "0.3"
+wasm-bindgen-futures = "0.4"
+
+# Shared
+uuid = { version = "1", features = ["v4", "serde"] }
+
 # Internal crates
 core_types = { path = "crates/core_types" }
 capture = { path = "crates/capture" }
@@ -57,3 +75,4 @@ sandbox = { path = "crates/sandbox" }
 agent = { path = "crates/agent" }
 tasks_rust_koans = { path = "crates/tasks_rust_koans" }
 eval = { path = "crates/eval" }
+web_types = { path = "crates/web_types" }
