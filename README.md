@@ -164,44 +164,21 @@ single-shot inference, no prompt hints, HuggingFace bf16:
 
 Each v4 coefficient applied **individually to all 30 koans** to measure interference:
 
-```
-Koan     BL  mut_bc dbl_mt ret_lr mis_cl mis_hs mis_or opt_ok res_me ROUTED AVGD
-─────────────────────────────────────────────────────────────────────────────────
-bc_001    P   P      P      P      P      P      P      P      P      P      P
-bc_002    P   P      P      P      P      P      P      P      P      P      P
-bc_003    .   .      .      .      .      .      .      .      .      .      .
-bc_004    P   P      P      P      P      P      P      P      P      P      P
-bc_005    .   .      .      .      .      .      .      .      .      .      .
-bc_006    P   P      P      P      P      P      P      P      P      P      P
-bc_007    P   P      P      P      P      P      P      P      P      P      P
-bc_008    P   P      P      P      P      P      P      P      P      P      P
-bc_009    P   P      P      P      P      P      P      P      P      P      P
-bc_010    .   .      .      .      .      .      .      .      .      .      .
-rh_001    .   .      .      .      .      .      .      .      .      .      .
-rh_002    .   .     +GAIN   .      .     +GAIN  +GAIN  +GAIN  +GAIN  +GAIN   .
-rh_003    .   .      .      .      .      .      .      .      .      .      .
-rh_004    .   .      .      .      .      .      .      .      .      .      .
-rh_005    P   P      P      P      P      P      P      P      P      P      P
-rh_006    P   P      P      P      P      P      P      P      P      P      P
-rh_007    P   P      P      P      P      P      P      P      P      P      P
-rh_008    P  -LOST  -LOST  -LOST  -LOST  -LOST  -LOST  -LOST  -LOST   P    -LOST
-rh_009    .   .      .      .      .      .      .      .      .      .      .
-rh_010    .   .      .      .      .      .      .      .      .      .      .
-tb_001    .   .      .      .      .      .      .      .      .      .      .
-tb_002    .   .      .      .      .      .      .      .      .      .      .
-tb_003    P   P      P      P      P      P      P      P      P      P      P
-tb_004    P   P      P      P      P      P      P      P      P      P      P
-tb_005    P   P      P      P      P     -LOST   P      P      P      P      P
-tb_006    .   .      .      .      .      .      .      .      .      .      .
-tb_007    .   .      .      .      .      .      .      .      .      .      .
-tb_008    .   .      .      .      .      .      .      .      .      .      .
-tb_009    .   .      .      .      .      .      .      .      .      .      .
-tb_010    .   .      .      .      .      .      .      .      .      .      .
-─────────────────────────────────────────────────────────────────────────────────
-Total   14/30 13    14     13     13     13     14     14     14     15     13
-```
+![Forgetting Heatmap](docs/viz/forgetting_heatmap.svg)
 
-Key: `P` = pass, `.` = fail, `+GAIN` = was fail now pass, `-LOST` = was pass now fail
+### Per-Coefficient Impact
+
+![Coefficient Impact](docs/viz/coefficient_impact.svg)
+
+### Strategy Comparison
+
+![Strategy Comparison](docs/viz/strategy_comparison.svg)
+
+### Per-Family Breakdown
+
+![Per-Family Breakdown](docs/viz/per_family_breakdown.svg)
+
+For full results with raw data, see [docs/results.md](docs/results.md).
 
 ### Conclusions
 
