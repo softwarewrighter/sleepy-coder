@@ -1,8 +1,32 @@
 # Project Status: Sleepy Coder
 
-## Current Phase: Prompt Engineering (Success!)
+## Current Phase: Share/UWSH Paper Validation
 
-**Last Updated**: 2026-02-17
+**Last Updated**: 2026-02-18
+
+---
+
+## Share/UWSH Paper Implementation Status
+
+| Paper Claim | Infrastructure | Demonstrated? |
+|-------------|----------------|---------------|
+| Shared basis via SVD | Complete | Yes |
+| ~100x parameter reduction | Complete (76x) | Yes |
+| **Task routing beats averaging** | Tested (Exp 1b) | **Partial** (50% vs 50%, but routing prevents regressions) |
+| **Prevents catastrophic forgetting** | Tested (Exp 1b) | **Partial** (zero regressions in single-task test) |
+| **Sequential learning** | Not tested | **NO** |
+| **UWSH subspace stability** | Not tested | **NO** |
+
+**Overall Completeness: ~70%** — Routing tested, sequential learning not yet demonstrated.
+
+### Remaining Experiments (Paper-Focused)
+
+1. **Sequential Learning Curve**: Train task 1 → eval, train task 2 → eval (verify task 1 still passes), repeat for 5-10 tasks
+2. **UWSH Verification**: Compare subspaces from different adapter subsets (Grassmann distance)
+3. **Improved Routing**: Fix k_alpha=32 (paper recommends), add rank update vectors
+
+See [paper-checklists.md](./paper-checklists.md) for detailed experiment checklists.
+See [cuda-next-steps.md](./cuda-next-steps.md) for CUDA system handoff.
 
 ---
 

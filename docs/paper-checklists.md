@@ -40,30 +40,30 @@ This document provides step-by-step checklists for demonstrating the concepts fr
 
 **Status**: Complete
 
-### Inference Strategy (CRITICAL - our main gap)
+### Inference Strategy (TESTED - Exp 1a/1b)
 
-- [ ] **Implement task/error classifier**
+- [x] **Implement task/error classifier**
   - Detect error type from compiler output
   - Map to coefficient set
-- [ ] **Route to appropriate coefficients at inference time**
-  - Do NOT average coefficients
+- [x] **Route to appropriate coefficients at inference time**
   - Select single best-matching coefficient set
-- [ ] **Compare routed vs averaged inference**
-  - Hypothesis: routing > averaging significantly
-- [ ] **Evaluate per-error-family pass rates**
+- [x] **Compare routed vs averaged inference**
+  - Result: 50% both, but routing prevents rh_008 regression
+- [x] **Evaluate per-error-family pass rates**
+  - RH improved 40%→50% with routing
 
-**Status**: NOT DONE - we averaged instead of routing
+**Status**: TESTED (Exp 1b) - Routing works, prevents forgetting. Next: fix k_alpha=32.
 
 ### Experiments to Run
 
 | # | Experiment | Expected Outcome | Status |
 |---|------------|------------------|--------|
-| 1 | Coefficient-only training (7 failure patterns) | No regressions on other 23 tasks | Not done |
-| 2 | Task routing at inference | Higher pass rate than averaging | Not done |
+| 1 | Coefficient-only training (7 failure patterns) | No regressions on other 23 tasks | Done (v4) |
+| 2 | Task routing at inference | Higher pass rate than averaging | **Done (Exp 1b)** - tie but routing saves rh_008 |
 | 3 | Comparison: phase2 vs full LoRA | Phase2 has less forgetting | Partially done |
 | 4 | Vary k (10, 20, 30, 40) | Find optimal basis size | Not done |
-| 5 | Vary p (1, 2, 4) | Compare coefficient ranks | Not done |
-| 6 | Sequential task learning | Each new task doesn't hurt previous | Not done |
+| 5 | Vary p (1, 2, 4) | Compare coefficient ranks | p=4 tested |
+| 6 | Sequential task learning | Each new task doesn't hurt previous | **NOT DONE - KEY** |
 
 ---
 
@@ -138,12 +138,12 @@ This document provides step-by-step checklists for demonstrating the concepts fr
 
 | Paper Says | What We Did | Gap |
 |------------|-------------|-----|
-| Phase 2 trains only coefficients | Trained full LoRA, then projected | Need true Phase 2 |
-| Coefficient size k × p (p ≈ 1) | Stored k × r coefficients | Wrong dimensions |
-| Task-specific routing at inference | Averaged coefficients | Need router |
+| Phase 2 trains only coefficients | ✅ v4 gradient-trained coefficients | Done |
+| Coefficient size k × p (p ≈ 1) | Using p=4, k_alpha=174 (too high) | Fix k_alpha=32 |
+| Task-specific routing at inference | ✅ Tested in Exp 1b | Done (prevents regressions) |
 | 60% variance threshold for k | Used this | Done |
 | Orthonormal basis from SVD | Used this | Done |
-| Sequential task training | Trained on all patterns at once | Need sequential |
+| Sequential task training | Trained on all patterns at once | **KEY GAP** |
 
 ---
 
@@ -151,22 +151,22 @@ This document provides step-by-step checklists for demonstrating the concepts fr
 
 ### High Priority (Core Claims)
 
-1. **Routed inference beats averaging**
-   - This is the most direct demonstration of Share's value
-   - Should show immediate improvement over our 73.3% average result
+1. **Sequential learning curve** ⬅️ **NOT DONE - KEY EXPERIMENT**
+   - Train task 1 → eval all, train task 2 → eval all, ...
+   - Show flat curve (no forgetting)
+   - This proves the paper's main claim
 
-2. **Coefficient-only training prevents forgetting**
-   - Train on ONE new pattern
-   - Verify other 29 patterns still pass
-   - Compare to full LoRA (which caused regressions)
+2. ~~**Routed inference beats averaging**~~ ✅ TESTED (Exp 1b)
+   - Routing prevents rh_008 regression that averaging causes
+   - Next: improve with k_alpha=32
 
 ### Medium Priority (Supporting Evidence)
 
-3. **Parameter efficiency**
-   - Document: 1.6M params (full LoRA) vs ~21K (Share coefficients)
-   - Show similar performance with 76x fewer parameters
+3. **Parameter efficiency** ✅ DONE
+   - Documented: 1.6M params (full LoRA) vs ~21K (Share coefficients)
+   - 76x fewer parameters
 
-4. **Subspace stability (UWSH)**
+4. **Subspace stability (UWSH)** - NOT DONE
    - Show that different adapter sets converge to similar subspaces
    - Validates the theoretical foundation
 
@@ -184,9 +184,10 @@ This document provides step-by-step checklists for demonstrating the concepts fr
 
 | Metric | Target | Current Best |
 |--------|--------|--------------|
-| Pass rate with routing | ≥ 80% | 73.3% (averaged) |
-| Forgetting rate | 0% | ~10% with full LoRA |
-| Parameter reduction | ≥ 50x | 76x (coefficient only) |
+| Pass rate with routing | ≥ 80% | 50.0% (v4 routed) |
+| Forgetting rate | 0% | 0% (v4 single-task) |
+| Sequential learning | No degradation | Not tested |
+| Parameter reduction | ≥ 50x | 76x (coefficient only) ✅ |
 | Subspace overlap | ≥ 70% | Not measured |
 
 ---
@@ -239,8 +240,9 @@ def select_coefficient(error_message, coefficients_map):
 
 ## Next Actions
 
-1. [ ] Implement proper routing system for existing coefficients
-2. [ ] Run eval with routing instead of averaging
-3. [ ] Document results in comparison table
-4. [ ] If routing helps, implement proper Phase 2 training
-5. [ ] Create sequential learning experiment (train task 1, eval, train task 2, eval, ...)
+1. [x] ~~Implement proper routing system for existing coefficients~~ (Done - Exp 1b)
+2. [x] ~~Run eval with routing instead of averaging~~ (Done - 50% both, routing prevents regressions)
+3. [x] ~~Document results in comparison table~~ (Done - see status.md)
+4. [ ] Fix k_alpha=32 (paper recommends, currently 174)
+5. [ ] **Create sequential learning experiment** (train task 1, eval, train task 2, eval, ...) ⬅️ KEY
+6. [ ] UWSH verification (Grassmann distance between adapter subsets)

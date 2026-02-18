@@ -139,41 +139,64 @@
 
 ---
 
-## Phase 2: PaCT Methods (REVISED)
+## Phase 2: Share/UWSH Paper Implementation
 
-**Status**: In Progress - See [course-correction.md](./course-correction.md)
+**Status**: ~60% Complete - Infrastructure done, core claims not yet demonstrated
 
-### 2.1 Generate Distinct Task Families (50 adapters)
-- [ ] BorrowChecker variants (10 adapters): move, ref, mut, lifetime, copy/clone, rc/arc, cell, closure, async
-- [ ] TraitSystem variants (10 adapters): derive, impl, bounds, where, associated, dyn, send/sync, from/into, iterator, display
-- [ ] ErrorHandling variants (10 adapters): option, result, ?, match, combinators, custom error, thiserror, anyhow, unwrap, early return
-- [ ] Rust2024 variants (10 adapters): fmt, let-chain, let-else, is_some_and, is_ok_and, copied, flatten, matches, clippy, async closure
-- [ ] Advanced patterns (10 adapters): builder, newtype, typestate, phantom, unsafe, macro, proc_macro, simd, ffi, pin
+See [paper-checklists.md](./paper-checklists.md) for detailed experiment checklists.
 
-### 2.2 Implement Share Algorithm (arXiv:2602.06043)
-- [ ] `scripts/share_consolidate.py` - SVD-based subspace extraction
-- [ ] Extract k principal basis vectors (60% explained variance)
-- [ ] Compute per-adapter coefficients
-- [ ] Save frozen basis + coefficient vectors
-- [ ] Test on 10+ adapters
+### Paper Claims vs Implementation Status
 
-### 2.3 Coefficient-Only Training
-- [ ] `scripts/train_coefficients.py` - Train only coefficients (basis frozen)
-- [ ] Compare training cost vs full LoRA
-- [ ] Validate no forgetting on frozen eval set
-- [ ] Achieve pass rate ≥ 76.7% (baseline)
+| Paper Claim | Implementation | Demonstrated? |
+|-------------|----------------|---------------|
+| Shared basis via SVD | Complete | Yes |
+| ~100x parameter reduction | Complete (76x) | Yes |
+| **Prevents catastrophic forgetting** | Tested (Exp 1b) | **Partial** (zero regressions single-task) |
+| **Task routing beats averaging** | Tested (Exp 1b) | **Partial** (50% both, routing saves rh_008) |
+| **Sequential learning** | Not tested | **NO** |
+| Universal subspaces (UWSH) | Not tested | **NO** |
 
-### 2.4 Incremental Subspace Update
-- [ ] Implement merge algorithm (Algorithm 1, Phase 3)
-- [ ] Reconstruct prior adapters from basis + coefficients
-- [ ] Re-run SVD to update subspace
-- [ ] Test with 20+ adapters arriving incrementally
+### 2.1 Infrastructure (COMPLETE)
 
-### 2.5 Validation & Demos
-- [ ] Compare: baseline vs naive LoRA vs Share
-- [ ] Generate side-by-side comparison plots
-- [ ] Document compression ratio (adapters → coefficients)
-- [ ] Record demo videos
+- [x] Generate 51 task-specific LoRA adapters
+- [x] `scripts/share_complete.py` - Full 3-phase Share algorithm
+- [x] Phase 1: SVD-based subspace extraction (60% variance threshold)
+- [x] Phase 2: Coefficient-only training capability
+- [x] Phase 3: Basis merging and updates
+- [x] Save/load frozen basis + coefficient vectors
+- [x] `scripts/routed_inference.py` - Error pattern classification
+
+### 2.2 Experiments to Demonstrate Paper Claims
+
+#### Experiment A: Task Routing vs Averaging (TESTED - Exp 1a/1b)
+- [x] Implement coefficient selection based on error type
+- [x] Run eval with routing (select best coefficient per error)
+- [x] Compare to averaging baseline
+- **Result (Exp 1a)**: Analytical projection hurt (43.3% vs 50.0% baseline)
+- **Result (Exp 1b)**: Gradient-trained v4: 50.0% both, but routing **prevents rh_008 regression**
+- [ ] **Next**: Fix k_alpha=32 (paper recommends), add rank update vectors
+
+#### Experiment B: Sequential Learning (Forgetting Prevention) - NOT DONE
+- [ ] Train coefficient for task 1 → eval all 30 tasks
+- [ ] Train coefficient for task 2 → eval all 30 tasks (verify task 1 still passes)
+- [ ] Continue for 5-10 tasks
+- [ ] Plot learning curve showing no degradation
+- [ ] **Target**: No degradation on previously-learned tasks
+
+#### Experiment C: UWSH Subspace Stability - NOT DONE
+- [ ] Extract subspace from adapters subset A
+- [ ] Extract subspace from adapters subset B
+- [ ] Measure Grassmann distance between subspaces
+- [ ] **Target**: High overlap (>70%) validates UWSH hypothesis
+
+### 2.3 Success Criteria (Paper-Focused)
+
+| Metric | Current | Target | Paper Reference |
+|--------|---------|--------|-----------------|
+| Pass rate (routed) | 73.3% (avg) | ≥80% | Share §4.2 |
+| Forgetting rate | ~10% (full LoRA) | 0% | Share §1 |
+| Parameter reduction | 76x | ≥50x | Share §3.3 |
+| Subspace overlap | Not measured | ≥70% | UWSH §3 |
 
 ### Key Hyperparameters (from paper)
 - **k**: Principal factors at 60% explained variance

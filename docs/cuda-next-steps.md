@@ -6,68 +6,63 @@ This document provides context for Claude CLI to continue Share algorithm experi
 
 ## Context
 
-We identified critical gaps between our Share implementation and the paper:
+We've made progress on Share paper validation:
 
-1. **We averaged coefficients** - Paper says to **route to task-specific coefficients**
-2. **We trained full LoRA then projected** - Paper says to **train only coefficients with frozen basis**
+1. **Routing tested (Exp 1a/1b)** - Gradient-trained routing shows zero regressions
+2. **Coefficient training works** - v4 coefficients properly trained with both-random init
+3. **Key finding**: Routing protects unrelated koans (rh_008 preserved)
 
-Current best result: 83.3% with prompt engineering, 73.3% with Share (averaged).
+Current results:
+- Prompt engineering: 83.3%
+- Share averaged: 50.0%
+- Share routed (v4): 50.0% (but zero regressions, RH +10%)
 
 See `docs/paper-checklists.md` for the full checklist.
+See `docs/status.md` for Experiment 1a/1b details.
 
 ---
 
 ## Priority Experiments (in order)
 
-### Experiment 1: Routing vs Averaging
+### Experiment 1: DONE - Routing vs Averaging
 
-**Goal**: Demonstrate that task-specific routing beats coefficient averaging.
+**Status**: Tested in Exp 1a (analytical) and Exp 1b (gradient-trained v4)
 
-**Steps**:
-1. Load existing Share basis and coefficients from `runs/share_proper_trained/`
-2. Implement error classifier (regex patterns exist in `scripts/routed_inference.py`)
-3. At inference time, select coefficient based on error type
-4. Run full eval with routing
-5. Compare to 73.3% averaged baseline
+**Results**:
+- Analytical projection: 43.3% (hurt)
+- Gradient-trained v4: 50.0% routed, 50.0% averaged
+- **Key win**: Routing prevents rh_008 regression that averaging causes
 
-**Expected**: Routing should outperform averaging significantly.
+**Next improvements**:
+1. Fix k_alpha=32 (currently 174, paper recommends ~32)
+2. Add rank update vectors
+3. Results saved in `runs/experiments/forgetting/`
 
-**Files**:
-- `scripts/routed_inference.py` - Has error pattern regexes
-- `scripts/share_complete.py` - Has Share algorithm implementation
-- `runs/share_proper_trained/` - Saved basis + coefficients
-
-### Experiment 2: Coefficient-Only Training (True Phase 2)
-
-**Goal**: Verify that training only coefficients prevents forgetting.
-
-**Steps**:
-1. Freeze basis (β, α) completely
-2. Initialize new coefficient (k × p) for ONE failure pattern (e.g., bc_003)
-3. Train only the coefficient (~21K params)
-4. Eval on ALL 30 tasks
-5. Verify no regressions on other 29 tasks
-
-**Expected**: Zero forgetting because basis is frozen.
-
-**Code needed**:
-```python
-# Key difference from what we did:
-# - Freeze basis: basis_B.requires_grad = False
-# - Only optimize coefficients: optimizer = Adam([coef_B, coef_A])
-# - Coefficient size: (k, p) where p=1, NOT (k, r)
-```
-
-### Experiment 3: Sequential Learning Curve
+### Experiment 2: Sequential Learning Curve (NOT DONE)
 
 **Goal**: Demonstrate continual learning (train task 1, then 2, then 3...).
 
 **Steps**:
 1. Start with base model (no adapters)
-2. Train coefficient for task 1 → eval
-3. Train coefficient for task 2 → eval (verify task 1 still passes)
+2. Train coefficient for task 1 → eval ALL 30 tasks
+3. Train coefficient for task 2 → eval ALL 30 tasks (verify task 1 still passes)
 4. Repeat for 5-10 tasks
 5. Plot learning curve showing no forgetting
+
+**Expected**: Flat curve on previously-learned tasks (no degradation).
+
+**This is the KEY experiment** to demonstrate the paper's core claim about preventing catastrophic forgetting.
+
+### Experiment 3: UWSH Subspace Stability (NOT DONE)
+
+**Goal**: Verify universal subspace hypothesis.
+
+**Steps**:
+1. Split 51 adapters into two subsets (A and B)
+2. Extract subspace from subset A
+3. Extract subspace from subset B
+4. Compute Grassmann distance between subspaces
+5. **Target**: >70% overlap validates UWSH
 
 ---
 
