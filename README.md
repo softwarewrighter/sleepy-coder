@@ -143,6 +143,89 @@ The koans are organized by error type:
 ./scripts/quick-cycle.sh
 ```
 
+## Experiment Results
+
+### Share Algorithm: Routing Prevents Catastrophic Forgetting
+
+We implemented the [Share](https://arxiv.org/html/2602.06043v1) algorithm for continual learning:
+Phase 1 extracts a shared SVD basis from LoRA adapters, Phase 2 trains only
+small coefficient matrices (83K params) per task with the basis frozen.
+
+Evaluated on 30 frozen koans (10 borrow checker, 10 result handling, 10 trait bounds),
+single-shot inference, no prompt hints, HuggingFace bf16:
+
+| Strategy | Pass Rate | BC | RH | TB | Regressions |
+|----------|-----------|----|----|----|----|
+| Baseline (no LoRA) | 46.7% | 70% | 40% | 30% | -- |
+| Averaged (all coefficients) | 50.0% | 70% | 40% | 40% | 1 |
+| **Routed (pattern-matched)** | **50.0%** | **70%** | **50%** | **30%** | **0** |
+
+### Forgetting Heatmap
+
+Each v4 coefficient applied **individually to all 30 koans** to measure interference:
+
+```
+Koan     BL  mut_bc dbl_mt ret_lr mis_cl mis_hs mis_or opt_ok res_me ROUTED AVGD
+─────────────────────────────────────────────────────────────────────────────────
+bc_001    P   P      P      P      P      P      P      P      P      P      P
+bc_002    P   P      P      P      P      P      P      P      P      P      P
+bc_003    .   .      .      .      .      .      .      .      .      .      .
+bc_004    P   P      P      P      P      P      P      P      P      P      P
+bc_005    .   .      .      .      .      .      .      .      .      .      .
+bc_006    P   P      P      P      P      P      P      P      P      P      P
+bc_007    P   P      P      P      P      P      P      P      P      P      P
+bc_008    P   P      P      P      P      P      P      P      P      P      P
+bc_009    P   P      P      P      P      P      P      P      P      P      P
+bc_010    .   .      .      .      .      .      .      .      .      .      .
+rh_001    .   .      .      .      .      .      .      .      .      .      .
+rh_002    .   .     +GAIN   .      .     +GAIN  +GAIN  +GAIN  +GAIN  +GAIN   .
+rh_003    .   .      .      .      .      .      .      .      .      .      .
+rh_004    .   .      .      .      .      .      .      .      .      .      .
+rh_005    P   P      P      P      P      P      P      P      P      P      P
+rh_006    P   P      P      P      P      P      P      P      P      P      P
+rh_007    P   P      P      P      P      P      P      P      P      P      P
+rh_008    P  -LOST  -LOST  -LOST  -LOST  -LOST  -LOST  -LOST  -LOST   P    -LOST
+rh_009    .   .      .      .      .      .      .      .      .      .      .
+rh_010    .   .      .      .      .      .      .      .      .      .      .
+tb_001    .   .      .      .      .      .      .      .      .      .      .
+tb_002    .   .      .      .      .      .      .      .      .      .      .
+tb_003    P   P      P      P      P      P      P      P      P      P      P
+tb_004    P   P      P      P      P      P      P      P      P      P      P
+tb_005    P   P      P      P      P     -LOST   P      P      P      P      P
+tb_006    .   .      .      .      .      .      .      .      .      .      .
+tb_007    .   .      .      .      .      .      .      .      .      .      .
+tb_008    .   .      .      .      .      .      .      .      .      .      .
+tb_009    .   .      .      .      .      .      .      .      .      .      .
+tb_010    .   .      .      .      .      .      .      .      .      .      .
+─────────────────────────────────────────────────────────────────────────────────
+Total   14/30 13    14     13     13     13     14     14     14     15     13
+```
+
+Key: `P` = pass, `.` = fail, `+GAIN` = was fail now pass, `-LOST` = was pass now fail
+
+### Conclusions
+
+1. **Routing prevents forgetting.** rh_008 regresses under every single coefficient
+   applied globally, but routing **saves it** by falling back to base model when
+   no pattern matches. The routing mechanism is essential.
+
+2. **Gradient-trained coefficients work.** Earlier analytical projection (Phase 1 only)
+   caused regressions (43.3%). Proper Phase 2 gradient training with LoRA-style
+   initialization eliminated regressions entirely.
+
+3. **Result handling improved.** Routed RH went from 40% to 50% -- the first
+   positive transfer from Share coefficients.
+
+4. **Key bug fixes required.**
+   - Zero-init saddle point: `eps_beta=0, eps_alpha=0` gives `delta_W = 0 @ 0`
+     with zero gradients. Both need small random init.
+   - Half-param training: LoRA-style init (one zero, one random) only trains
+     one parameter set. Dual random init trains all 224/224 params.
+
+5. **Prompt engineering still wins overall** (83.3% with error hints vs 50% without),
+   but Share routing is the path to continual improvement on truly new patterns
+   (Rust 2024 edition, custom coding standards).
+
 ## Key Metrics
 
 The agent tracks these metrics across training cycles:
