@@ -218,9 +218,16 @@ class ShareInferenceEngine:
             module.weight.data.copy_(self._original_weights[layer])
         self._active_coef = None
 
-    def apply_coefficients(self, coef_id: str):
-        """Apply a single coefficient set by modifying weights directly."""
-        if self._active_coef == coef_id:
+    def apply_coefficients(self, coef_id: str, scale: float = 1.0):
+        """Apply a single coefficient set by modifying weights directly.
+
+        Args:
+            coef_id: Name of the coefficient set to apply.
+            scale: Scaling factor for delta_W (like LoRA alpha/r).
+                   Use < 1.0 to reduce the adaptation strength.
+        """
+        cache_key = f"{coef_id}@{scale}"
+        if self._active_coef == cache_key:
             return
         # Always restore first to avoid stacking deltas
         self.restore_weights()
@@ -229,9 +236,9 @@ class ShareInferenceEngine:
         for layer, module in self._module_map.items():
             eps_beta, eps_alpha = coefficients[layer]
             delta_W = self._reconstruct_delta(layer, eps_beta, eps_alpha)
-            module.weight.data.add_(delta_W)
+            module.weight.data.add_(delta_W * scale)
 
-        self._active_coef = coef_id
+        self._active_coef = cache_key
 
     def apply_averaged_coefficients(self, coef_ids: List[str]):
         """Average multiple coefficient sets and apply as a single delta."""

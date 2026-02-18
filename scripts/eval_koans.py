@@ -27,18 +27,29 @@ from share_inference import ShareInferenceEngine, detect_pattern
 FROZEN_EVAL_PREFIXES = ("bc_", "tb_", "rh_")
 FROZEN_EVAL_IDS = {f"{p}{i:03d}" for p in ("bc_", "tb_", "rh_") for i in range(1, 11)}
 
-# Named coefficient sets (patterns that have trained coefficients)
+# Named coefficient sets (v4: dual-random init, p=4, 100 steps, both params trained)
 NAMED_COEFFICIENTS = [
-    "mut_borrow_conflict",
-    "double_mut_borrow",
-    "return_local_ref",
-    "missing_clone",
-    "missing_hash",
-    "missing_ord",
-    "option_ok_or",
-    "result_map_err",
-    "failures_v1",
+    "mut_borrow_conflict_v4",
+    "double_mut_borrow_v4",
+    "return_local_ref_v4",
+    "missing_clone_v4",
+    "missing_hash_v4",
+    "missing_ord_v4",
+    "option_ok_or_v4",
+    "result_map_err_v4",
 ]
+
+# Mapping from pattern name (as returned by detect_pattern) to coefficient id
+PATTERN_TO_COEF = {
+    "mut_borrow_conflict": "mut_borrow_conflict_v4",
+    "double_mut_borrow": "double_mut_borrow_v4",
+    "return_local_ref": "return_local_ref_v4",
+    "missing_clone": "missing_clone_v4",
+    "missing_hash": "missing_hash_v4",
+    "missing_ord": "missing_ord_v4",
+    "option_ok_or": "option_ok_or_v4",
+    "result_map_err": "result_map_err_v4",
+}
 
 
 @dataclass
@@ -190,8 +201,9 @@ class KoanEvaluator:
                 pattern_used = "averaged"
             elif strategy == "routed":
                 pattern = detect_pattern(error_message)
-                if pattern and pattern in NAMED_COEFFICIENTS:
-                    self.engine.apply_coefficients(pattern)
+                coef_id = PATTERN_TO_COEF.get(pattern) if pattern else None
+                if coef_id:
+                    self.engine.apply_coefficients(coef_id)
                     pattern_used = pattern
                 else:
                     # No matching pattern: fall back to base model (no-harm principle)

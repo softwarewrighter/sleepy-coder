@@ -26,7 +26,7 @@ from share_inference import ShareInferenceEngine
 from eval_koans import KoanEvaluator, EvalResults, load_frozen_koans, NAMED_COEFFICIENTS
 
 
-SHARE_DIR = Path("runs/share_proper_trained")
+SHARE_DIR = Path("runs/share_phase2")
 RESULTS_DIR = Path("runs/experiments")
 
 
