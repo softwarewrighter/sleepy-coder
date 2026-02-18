@@ -1,0 +1,650 @@
+{
+  "timestamp": "2026-02-17T19:15:23.732384",
+  "share_dir": "runs/share_phase2",
+  "baseline": {
+    "pass_rate": 0.4666666666666667,
+    "passed": 14,
+    "total": 30,
+    "per_family": {
+      "borrow_checker": {
+        "total": 10,
+        "passed": 7
+      },
+      "result_handling": {
+        "total": 10,
+        "passed": 4
+      },
+      "trait_bounds": {
+        "total": 10,
+        "passed": 3
+      }
+    },
+    "per_koan": {
+      "bc_001": true,
+      "bc_002": true,
+      "bc_003": false,
+      "bc_004": true,
+      "bc_005": false,
+      "bc_006": true,
+      "bc_007": true,
+      "bc_008": true,
+      "bc_009": true,
+      "bc_010": false,
+      "rh_001": false,
+      "rh_002": false,
+      "rh_003": false,
+      "rh_004": false,
+      "rh_005": true,
+      "rh_006": true,
+      "rh_007": true,
+      "rh_008": true,
+      "rh_009": false,
+      "rh_010": false,
+      "tb_001": false,
+      "tb_002": false,
+      "tb_003": true,
+      "tb_004": true,
+      "tb_005": true,
+      "tb_006": false,
+      "tb_007": false,
+      "tb_008": false,
+      "tb_009": false,
+      "tb_010": false
+    }
+  },
+  "routed": {
+    "pass_rate": 0.5,
+    "passed": 15,
+    "total": 30,
+    "per_family": {
+      "borrow_checker": {
+        "total": 10,
+        "passed": 7
+      },
+      "result_handling": {
+        "total": 10,
+        "passed": 5
+      },
+      "trait_bounds": {
+        "total": 10,
+        "passed": 3
+      }
+    },
+    "per_koan": {
+      "bc_001": true,
+      "bc_002": true,
+      "bc_003": false,
+      "bc_004": true,
+      "bc_005": false,
+      "bc_006": true,
+      "bc_007": true,
+      "bc_008": true,
+      "bc_009": true,
+      "bc_010": false,
+      "rh_001": false,
+      "rh_002": true,
+      "rh_003": false,
+      "rh_004": false,
+      "rh_005": true,
+      "rh_006": true,
+      "rh_007": true,
+      "rh_008": true,
+      "rh_009": false,
+      "rh_010": false,
+      "tb_001": false,
+      "tb_002": false,
+      "tb_003": true,
+      "tb_004": true,
+      "tb_005": true,
+      "tb_006": false,
+      "tb_007": false,
+      "tb_008": false,
+      "tb_009": false,
+      "tb_010": false
+    },
+    "routing_map": {
+      "bc_001": "missing_clone",
+      "bc_002": "missing_clone",
+      "bc_003": "mut_borrow_conflict",
+      "bc_004": "mut_borrow_conflict",
+      "bc_005": "double_mut_borrow",
+      "bc_006": null,
+      "bc_007": null,
+      "bc_008": "missing_clone",
+      "bc_009": null,
+      "bc_010": null,
+      "rh_001": "option_ok_or",
+      "rh_002": null,
+      "rh_003": "result_map_err",
+      "rh_004": null,
+      "rh_005": "option_ok_or",
+      "rh_006": null,
+      "rh_007": "result_map_err",
+      "rh_008": "result_map_err",
+      "rh_009": null,
+      "rh_010": "result_map_err",
+      "tb_001": null,
+      "tb_002": "missing_clone",
+      "tb_003": "missing_clone",
+      "tb_004": null,
+      "tb_005": null,
+      "tb_006": null,
+      "tb_007": "missing_hash",
+      "tb_008": "missing_ord",
+      "tb_009": null,
+      "tb_010": null
+    }
+  },
+  "averaged": {
+    "pass_rate": 0.43333333333333335,
+    "passed": 13,
+    "total": 30,
+    "per_family": {
+      "borrow_checker": {
+        "total": 10,
+        "passed": 7
+      },
+      "result_handling": {
+        "total": 10,
+        "passed": 3
+      },
+      "trait_bounds": {
+        "total": 10,
+        "passed": 3
+      }
+    },
+    "per_koan": {
+      "bc_001": true,
+      "bc_002": true,
+      "bc_003": false,
+      "bc_004": true,
+      "bc_005": false,
+      "bc_006": true,
+      "bc_007": true,
+      "bc_008": true,
+      "bc_009": true,
+      "bc_010": false,
+      "rh_001": false,
+      "rh_002": false,
+      "rh_003": false,
+      "rh_004": false,
+      "rh_005": true,
+      "rh_006": true,
+      "rh_007": true,
+      "rh_008": false,
+      "rh_009": false,
+      "rh_010": false,
+      "tb_001": false,
+      "tb_002": false,
+      "tb_003": true,
+      "tb_004": true,
+      "tb_005": true,
+      "tb_006": false,
+      "tb_007": false,
+      "tb_008": false,
+      "tb_009": false,
+      "tb_010": false
+    }
+  },
+  "per_coefficient": {
+    "mut_borrow_conflict_v4": {
+      "pass_rate": 0.43333333333333335,
+      "passed": 13,
+      "total": 30,
+      "per_family": {
+        "borrow_checker": {
+          "total": 10,
+          "passed": 7
+        },
+        "result_handling": {
+          "total": 10,
+          "passed": 3
+        },
+        "trait_bounds": {
+          "total": 10,
+          "passed": 3
+        }
+      },
+      "per_koan": {
+        "bc_001": true,
+        "bc_002": true,
+        "bc_003": false,
+        "bc_004": true,
+        "bc_005": false,
+        "bc_006": true,
+        "bc_007": true,
+        "bc_008": true,
+        "bc_009": true,
+        "bc_010": false,
+        "rh_001": false,
+        "rh_002": false,
+        "rh_003": false,
+        "rh_004": false,
+        "rh_005": true,
+        "rh_006": true,
+        "rh_007": true,
+        "rh_008": false,
+        "rh_009": false,
+        "rh_010": false,
+        "tb_001": false,
+        "tb_002": false,
+        "tb_003": true,
+        "tb_004": true,
+        "tb_005": true,
+        "tb_006": false,
+        "tb_007": false,
+        "tb_008": false,
+        "tb_009": false,
+        "tb_010": false
+      },
+      "gains": [],
+      "regressions": [
+        "rh_008"
+      ],
+      "net_delta": -1
+    },
+    "double_mut_borrow_v4": {
+      "pass_rate": 0.4666666666666667,
+      "passed": 14,
+      "total": 30,
+      "per_family": {
+        "borrow_checker": {
+          "total": 10,
+          "passed": 7
+        },
+        "result_handling": {
+          "total": 10,
+          "passed": 4
+        },
+        "trait_bounds": {
+          "total": 10,
+          "passed": 3
+        }
+      },
+      "per_koan": {
+        "bc_001": true,
+        "bc_002": true,
+        "bc_003": false,
+        "bc_004": true,
+        "bc_005": false,
+        "bc_006": true,
+        "bc_007": true,
+        "bc_008": true,
+        "bc_009": true,
+        "bc_010": false,
+        "rh_001": false,
+        "rh_002": true,
+        "rh_003": false,
+        "rh_004": false,
+        "rh_005": true,
+        "rh_006": true,
+        "rh_007": true,
+        "rh_008": false,
+        "rh_009": false,
+        "rh_010": false,
+        "tb_001": false,
+        "tb_002": false,
+        "tb_003": true,
+        "tb_004": true,
+        "tb_005": true,
+        "tb_006": false,
+        "tb_007": false,
+        "tb_008": false,
+        "tb_009": false,
+        "tb_010": false
+      },
+      "gains": [
+        "rh_002"
+      ],
+      "regressions": [
+        "rh_008"
+      ],
+      "net_delta": 0
+    },
+    "return_local_ref_v4": {
+      "pass_rate": 0.43333333333333335,
+      "passed": 13,
+      "total": 30,
+      "per_family": {
+        "borrow_checker": {
+          "total": 10,
+          "passed": 7
+        },
+        "result_handling": {
+          "total": 10,
+          "passed": 3
+        },
+        "trait_bounds": {
+          "total": 10,
+          "passed": 3
+        }
+      },
+      "per_koan": {
+        "bc_001": true,
+        "bc_002": true,
+        "bc_003": false,
+        "bc_004": true,
+        "bc_005": false,
+        "bc_006": true,
+        "bc_007": true,
+        "bc_008": true,
+        "bc_009": true,
+        "bc_010": false,
+        "rh_001": false,
+        "rh_002": false,
+        "rh_003": false,
+        "rh_004": false,
+        "rh_005": true,
+        "rh_006": true,
+        "rh_007": true,
+        "rh_008": false,
+        "rh_009": false,
+        "rh_010": false,
+        "tb_001": false,
+        "tb_002": false,
+        "tb_003": true,
+        "tb_004": true,
+        "tb_005": true,
+        "tb_006": false,
+        "tb_007": false,
+        "tb_008": false,
+        "tb_009": false,
+        "tb_010": false
+      },
+      "gains": [],
+      "regressions": [
+        "rh_008"
+      ],
+      "net_delta": -1
+    },
+    "missing_clone_v4": {
+      "pass_rate": 0.43333333333333335,
+      "passed": 13,
+      "total": 30,
+      "per_family": {
+        "borrow_checker": {
+          "total": 10,
+          "passed": 7
+        },
+        "result_handling": {
+          "total": 10,
+          "passed": 3
+        },
+        "trait_bounds": {
+          "total": 10,
+          "passed": 3
+        }
+      },
+      "per_koan": {
+        "bc_001": true,
+        "bc_002": true,
+        "bc_003": false,
+        "bc_004": true,
+        "bc_005": false,
+        "bc_006": true,
+        "bc_007": true,
+        "bc_008": true,
+        "bc_009": true,
+        "bc_010": false,
+        "rh_001": false,
+        "rh_002": false,
+        "rh_003": false,
+        "rh_004": false,
+        "rh_005": true,
+        "rh_006": true,
+        "rh_007": true,
+        "rh_008": false,
+        "rh_009": false,
+        "rh_010": false,
+        "tb_001": false,
+        "tb_002": false,
+        "tb_003": true,
+        "tb_004": true,
+        "tb_005": true,
+        "tb_006": false,
+        "tb_007": false,
+        "tb_008": false,
+        "tb_009": false,
+        "tb_010": false
+      },
+      "gains": [],
+      "regressions": [
+        "rh_008"
+      ],
+      "net_delta": -1
+    },
+    "missing_hash_v4": {
+      "pass_rate": 0.43333333333333335,
+      "passed": 13,
+      "total": 30,
+      "per_family": {
+        "borrow_checker": {
+          "total": 10,
+          "passed": 7
+        },
+        "result_handling": {
+          "total": 10,
+          "passed": 4
+        },
+        "trait_bounds": {
+          "total": 10,
+          "passed": 2
+        }
+      },
+      "per_koan": {
+        "bc_001": true,
+        "bc_002": true,
+        "bc_003": false,
+        "bc_004": true,
+        "bc_005": false,
+        "bc_006": true,
+        "bc_007": true,
+        "bc_008": true,
+        "bc_009": true,
+        "bc_010": false,
+        "rh_001": false,
+        "rh_002": true,
+        "rh_003": false,
+        "rh_004": false,
+        "rh_005": true,
+        "rh_006": true,
+        "rh_007": true,
+        "rh_008": false,
+        "rh_009": false,
+        "rh_010": false,
+        "tb_001": false,
+        "tb_002": false,
+        "tb_003": true,
+        "tb_004": true,
+        "tb_005": false,
+        "tb_006": false,
+        "tb_007": false,
+        "tb_008": false,
+        "tb_009": false,
+        "tb_010": false
+      },
+      "gains": [
+        "rh_002"
+      ],
+      "regressions": [
+        "rh_008",
+        "tb_005"
+      ],
+      "net_delta": -1
+    },
+    "missing_ord_v4": {
+      "pass_rate": 0.4666666666666667,
+      "passed": 14,
+      "total": 30,
+      "per_family": {
+        "borrow_checker": {
+          "total": 10,
+          "passed": 7
+        },
+        "result_handling": {
+          "total": 10,
+          "passed": 4
+        },
+        "trait_bounds": {
+          "total": 10,
+          "passed": 3
+        }
+      },
+      "per_koan": {
+        "bc_001": true,
+        "bc_002": true,
+        "bc_003": false,
+        "bc_004": true,
+        "bc_005": false,
+        "bc_006": true,
+        "bc_007": true,
+        "bc_008": true,
+        "bc_009": true,
+        "bc_010": false,
+        "rh_001": false,
+        "rh_002": true,
+        "rh_003": false,
+        "rh_004": false,
+        "rh_005": true,
+        "rh_006": true,
+        "rh_007": true,
+        "rh_008": false,
+        "rh_009": false,
+        "rh_010": false,
+        "tb_001": false,
+        "tb_002": false,
+        "tb_003": true,
+        "tb_004": true,
+        "tb_005": true,
+        "tb_006": false,
+        "tb_007": false,
+        "tb_008": false,
+        "tb_009": false,
+        "tb_010": false
+      },
+      "gains": [
+        "rh_002"
+      ],
+      "regressions": [
+        "rh_008"
+      ],
+      "net_delta": 0
+    },
+    "option_ok_or_v4": {
+      "pass_rate": 0.4666666666666667,
+      "passed": 14,
+      "total": 30,
+      "per_family": {
+        "borrow_checker": {
+          "total": 10,
+          "passed": 7
+        },
+        "result_handling": {
+          "total": 10,
+          "passed": 4
+        },
+        "trait_bounds": {
+          "total": 10,
+          "passed": 3
+        }
+      },
+      "per_koan": {
+        "bc_001": true,
+        "bc_002": true,
+        "bc_003": false,
+        "bc_004": true,
+        "bc_005": false,
+        "bc_006": true,
+        "bc_007": true,
+        "bc_008": true,
+        "bc_009": true,
+        "bc_010": false,
+        "rh_001": false,
+        "rh_002": true,
+        "rh_003": false,
+        "rh_004": false,
+        "rh_005": true,
+        "rh_006": true,
+        "rh_007": true,
+        "rh_008": false,
+        "rh_009": false,
+        "rh_010": false,
+        "tb_001": false,
+        "tb_002": false,
+        "tb_003": true,
+        "tb_004": true,
+        "tb_005": true,
+        "tb_006": false,
+        "tb_007": false,
+        "tb_008": false,
+        "tb_009": false,
+        "tb_010": false
+      },
+      "gains": [
+        "rh_002"
+      ],
+      "regressions": [
+        "rh_008"
+      ],
+      "net_delta": 0
+    },
+    "result_map_err_v4": {
+      "pass_rate": 0.4666666666666667,
+      "passed": 14,
+      "total": 30,
+      "per_family": {
+        "borrow_checker": {
+          "total": 10,
+          "passed": 7
+        },
+        "result_handling": {
+          "total": 10,
+          "passed": 4
+        },
+        "trait_bounds": {
+          "total": 10,
+          "passed": 3
+        }
+      },
+      "per_koan": {
+        "bc_001": true,
+        "bc_002": true,
+        "bc_003": false,
+        "bc_004": true,
+        "bc_005": false,
+        "bc_006": true,
+        "bc_007": true,
+        "bc_008": true,
+        "bc_009": true,
+        "bc_010": false,
+        "rh_001": false,
+        "rh_002": true,
+        "rh_003": false,
+        "rh_004": false,
+        "rh_005": true,
+        "rh_006": true,
+        "rh_007": true,
+        "rh_008": false,
+        "rh_009": false,
+        "rh_010": false,
+        "tb_001": false,
+        "tb_002": false,
+        "tb_003": true,
+        "tb_004": true,
+        "tb_005": true,
+        "tb_006": false,
+        "tb_007": false,
+        "tb_008": false,
+        "tb_009": false,
+        "tb_010": false
+      },
+      "gains": [
+        "rh_002"
+      ],
+      "regressions": [
+        "rh_008"
+      ],
+      "net_delta": 0
+    }
+  }
+}
