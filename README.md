@@ -17,7 +17,7 @@ sleepy-coder operates in a day/night cycle:
 
 [![Video Explainer](https://img.youtube.com/vi/YhAbOvWEkzE/maxresdefault.jpg)](https://www.youtube.com/watch?v=YhAbOvWEkzE&list=PLKjvVAEaR4itVMSjbcZ6PTS0bpnQ-NpIv)
 
-*Video Explainer*
+[Video Explainer](https://www.youtube.com/watch?v=YhAbOvWEkzE&list=PLKjvVAEaR4itVMSjbcZ6PTS0bpnQ-NpIv)
 
 **Blog Posts:**
 - [Sleepy Coder: When Fine-Tuning Fails](https://software-wrighter-lab.github.io/2026/02/12/sleepy-coder-when-fine-tuning-fails/)
