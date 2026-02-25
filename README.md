@@ -13,6 +13,16 @@ sleepy-coder operates in a day/night cycle:
 
 ![Day/Night Cycle](docs/diagrams/day-night-cycle-dark.svg)
 
+## Resources
+
+[![Video Explainer](https://img.youtube.com/vi/YhAbOvWEkzE/maxresdefault.jpg)](https://www.youtube.com/watch?v=YhAbOvWEkzE&list=PLKjvVAEaR4itVMSjbcZ6PTS0bpnQ-NpIv)
+
+*Video Explainer*
+
+**Blog Posts:**
+- [Sleepy Coder: When Fine-Tuning Fails](https://software-wrighter-lab.github.io/2026/02/12/sleepy-coder-when-fine-tuning-fails/)
+- [Sleepy Coder: Routing Prevents Forgetting](https://software-wrighter-lab.github.io/2026/02/18/sleepy-coder-routing-prevents-forgetting/)
+
 ## Quick Start
 
 ```bash
